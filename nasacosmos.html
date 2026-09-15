@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEONOSIS · NASA Cosmos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a1a; --bg2:#0d1226; --blue:#00d4ff; --purple:#7b2fff;
+  --white:#ffffff; --dim:#8fa0c8; --green:#00ff9c; --yellow:#ffd23f; --red:#ff3b5c;
+  --card:rgba(18,24,54,.72); --border:rgba(0,212,255,.22);
+  --nasa:#0b3d91; --nasared:#fc3d21;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Exo 2',sans-serif;color:var(--white);background:var(--bg);overflow-x:hidden;position:relative;min-height:100vh}
+.stars,.stars2{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stars{background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 60% 70%,#7b2fff,transparent),radial-gradient(2px 2px at 80% 20%,#00d4ff,transparent),radial-gradient(1px 1px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 90% 60%,#fff,transparent);background-size:200px 200px;opacity:.5;animation:drift 90s linear infinite}
+.stars2{background-image:radial-gradient(1px 1px at 10% 50%,#fff,transparent),radial-gradient(1px 1px at 70% 40%,#00d4ff,transparent),radial-gradient(1px 1px at 30% 10%,#fff,transparent);background-size:300px 300px;opacity:.3;animation:drift 140s linear infinite reverse}
+@keyframes drift{from{background-position:0 0}to{background-position:400px 400px}}
+.glow{position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none;opacity:.32}
+.g1{width:340px;height:340px;background:var(--nasa);top:-120px;left:-100px}
+.g2{width:300px;height:300px;background:var(--purple);bottom:-120px;right:-100px}
+
+.wrap{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:14px 14px 96px;min-height:100vh;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.back{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--blue);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.back:active{transform:scale(.92);background:rgba(0,212,255,.15)}
+.brand{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:3px;color:var(--dim)}
+.brand b{color:var(--blue)}
+
+/* ===== MENÚ ===== */
+.hero{text-align:center;padding:26px 10px 10px;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.nasa-logo{width:150px;height:150px;border-radius:50%;object-fit:cover;box-shadow:0 0 40px rgba(11,61,145,.7),0 0 18px rgba(0,212,255,.4);border:2px solid rgba(255,255,255,.15);background:#fff}
+.hero h1{font-family:'Orbitron';font-weight:900;font-size:clamp(26px,8vw,40px);letter-spacing:3px;margin:18px 0 6px;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--dim);font-size:15px;max-width:420px;line-height:1.55}
+
+/* Botones inferiores fijos */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;gap:10px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(6,8,20,.96),rgba(6,8,20,.6) 70%,transparent);max-width:680px;margin:0 auto}
+.dock .btn{flex:1}
+.btn{border:none;border-radius:16px;padding:16px 12px;font-family:'Orbitron';font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer;transition:.2s;color:#04122a;background:linear-gradient(90deg,var(--blue),var(--purple));box-shadow:0 8px 26px rgba(123,47,255,.35);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}
+.btn.alt{background:linear-gradient(90deg,var(--nasa),var(--nasared));color:#fff;box-shadow:0 8px 26px rgba(252,61,33,.3)}
+.btn.ghost{background:var(--card);color:var(--blue);border:1px solid var(--border);box-shadow:none}
+
+/* ===== TRIVIA ===== */
+.view{display:none;flex-direction:column;flex:1;animation:fade .3s ease}
+.view.on{display:flex}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tv-head{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}
+.counter{font-family:'Orbitron';font-weight:700;font-size:13px;color:var(--blue);letter-spacing:1px}
+.score{font-size:13px;color:var(--dim)}
+.progress{height:6px;border-radius:6px;background:var(--bg2);overflow:hidden;margin-bottom:12px}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));transition:width .3s}
+.qimg{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:16px;border:1px solid var(--border);background:var(--bg2);box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.qimg.tall{aspect-ratio:auto;max-height:260px}
+.qtext{font-family:'Orbitron';font-weight:700;font-size:17px;line-height:1.4;margin:14px 2px 12px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:14px 14px;font-size:15px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:12px;text-align:left}
+.opt:active{transform:scale(.99)}
+.opt .k{width:26px;height:26px;flex:0 0 26px;border-radius:8px;background:var(--bg2);color:var(--blue);font-family:'Orbitron';font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center}
+.opt.correct{border-color:var(--green);background:rgba(0,255,156,.12)}
+.opt.correct .k{background:var(--green);color:#04122a}
+.opt.wrong{border-color:var(--red);background:rgba(255,59,92,.12)}
+.opt.wrong .k{background:var(--red);color:#fff}
+.opt.locked{pointer-events:none;opacity:.9}
+.feedback{margin:12px 0 4px;padding:12px 14px;border-radius:12px;font-size:14px;display:none}
+.feedback.show{display:block}
+.feedback.ok{background:rgba(0,255,156,.1);border:1px solid rgba(0,255,156,.4);color:#b6ffde}
+.feedback.no{background:rgba(255,59,92,.1);border:1px solid rgba(255,59,92,.4);color:#ffc2cd}
+.nav{display:flex;gap:10px;margin-top:14px}
+
+/* ===== RESULTADO ===== */
+.result{text-align:center;padding:30px 12px;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.result .big{font-family:'Orbitron';font-weight:900;font-size:52px;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.result h2{font-family:'Orbitron';margin:6px 0 10px}
+.result p{color:var(--dim);max-width:380px;margin:0 auto 6px;line-height:1.5}
+
+/* ===== APOD ===== */
+.apod-media{width:100%;border-radius:16px;border:1px solid var(--border);background:var(--bg2);box-shadow:0 10px 30px rgba(0,0,0,.4);max-height:60vh;object-fit:contain}
+.apod-frame{width:100%;aspect-ratio:16/9;border:1px solid var(--border);border-radius:16px}
+.apod-title{font-family:'Orbitron';font-weight:700;font-size:18px;margin:14px 2px 4px;color:var(--white)}
+.apod-date{font-size:12px;color:var(--blue);letter-spacing:1px;margin-bottom:8px}
+.apod-exp{font-size:14px;line-height:1.6;color:#cdd8f0;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+.apod-cred{font-size:12px;color:var(--dim);margin-top:8px}
+.loader{display:none;text-align:center;padding:40px 0;color:var(--dim)}
+.loader.on{display:block}
+.spin{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{display:none;border:1px solid var(--red);background:rgba(255,59,92,.08);border-radius:14px;padding:14px;color:#ffb3c0;font-size:13px;text-align:center;margin-top:10px}
+.err.on{display:block}
+</style>
+</head>
+<body>
+<div class="stars"></div><div class="stars2"></div>
+<div class="glow g1"></div><div class="glow g2"></div>
+
+<div class="wrap">
+  <div class="top">
+    <div class="back" onclick="handleBack()">‹</div>
+    <div class="brand">GEO<b>NOSIS</b> · NASA COSMOS</div>
+  </div>
+
+  <!-- ===== MENÚ ===== -->
+  <div class="view on" id="v-menu">
+    <div class="hero">
+      <img class="nasa-logo" src="nasa_logo.jpg" alt="NASA">
+      <h1>NASA COSMOS</h1>
+      <p>Pon a prueba tu conocimiento del espacio con 50 preguntas y descubre la imagen astronómica del día de la NASA.</p>
+    </div>
+  </div>
+
+  <!-- ===== TRIVIA ===== -->
+  <div class="view" id="v-trivia">
+    <div class="tv-head">
+      <div class="counter" id="counter">Pregunta 1 / 50</div>
+      <div class="score" id="scoreLbl">Aciertos: 0</div>
+    </div>
+    <div class="progress"><i id="bar" style="width:2%"></i></div>
+    <img class="qimg" id="qimg" alt="">
+    <div class="qtext" id="qtext"></div>
+    <div class="opts" id="opts"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="nav">
+      <button class="btn" id="nextBtn" onclick="nextQuestion()" style="display:none">Siguiente ›</button>
+    </div>
+  </div>
+
+  <!-- ===== RESULTADO ===== -->
+  <div class="view" id="v-result">
+    <div class="result">
+      <div class="big" id="finalScore">0 / 50</div>
+      <h2 id="finalTitle">¡Buen trabajo!</h2>
+      <p id="finalMsg"></p>
+      <div class="nav" style="justify-content:center;margin-top:18px">
+        <button class="btn ghost" onclick="startTrivia()">↻ Reintentar</button>
+        <button class="btn" onclick="showMenu()">Menú</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== APOD ===== -->
+  <div class="view" id="v-apod">
+    <div class="loader" id="apodLoader"><div class="spin"></div>Cargando imagen del día…</div>
+    <div class="err" id="apodErr"></div>
+    <div id="apodContent" style="display:none">
+      <div id="apodMediaWrap"></div>
+      <div class="apod-title" id="apodTitle"></div>
+      <div class="apod-date" id="apodDate"></div>
+      <div class="apod-exp" id="apodExp"></div>
+      <div class="apod-cred" id="apodCred"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BOTONES INFERIORES (solo en el menú) ===== -->
+<div class="dock" id="dock">
+  <button class="btn" onclick="startTrivia()">🧠 Trivia</button>
+  <button class="btn alt" onclick="showApod()">🌌 Foto del día</button>
+</div>
+
+<script>
+/* === API KEY NASA ===
+   DEMO_KEY funciona pero está limitada (~30 peticiones/hora).
+   Reemplaza 'DEMO_KEY' por tu propia clave gratuita de https://api.nasa.gov
+   (la misma que usas en los otros módulos). */
+var NASA_KEY = 'DEMO_KEY';
+
+var QUESTIONS=[
+{n:1,q:"¿Qué significa NASA?",o:["National Aeronautics and Space Administration", "National Astronomy and Space Agency", "North American Space Association"],a:0},
+{n:2,q:"¿Cuál fue el primer ser humano en viajar al espacio?",o:["Neil Armstrong", "Yuri Gagarin", "Buzz Aldrin"],a:1},
+{n:3,q:"¿En qué año llegó el ser humano a la Luna por primera vez?",o:["1969", "1972", "1965"],a:0},
+{n:4,q:"¿Cuál fue la misión que llevó a los primeros humanos a la Luna?",o:["Apollo 8", "Apollo 11", "Apollo 13"],a:1},
+{n:5,q:"¿Quién fue el primer ser humano en pisar la Luna?",o:["Neil Armstrong", "Michael Collins", "Yuri Gagarin"],a:0},
+{n:6,q:"¿Qué planeta es conocido como el planeta rojo?",o:["Venus", "Marte", "Júpiter"],a:1},
+{n:7,q:"¿Cuál es el planeta más grande del Sistema Solar?",o:["Saturno", "Neptuno", "Júpiter"],a:2},
+{n:8,q:"¿Cuál es el planeta más cercano al Sol?",o:["Mercurio", "Venus", "Marte"],a:0},
+{n:9,q:"¿Qué planeta tiene los anillos más visibles?",o:["Saturno", "Urano", "Júpiter"],a:0},
+{n:10,q:"¿Cuál es la estrella más cercana a la Tierra?",o:["Sirio", "El Sol", "Próxima Centauri"],a:1},
+{n:11,q:"¿Qué fuerza mantiene a los planetas en órbita?",o:["Magnetismo", "Gravedad", "Electricidad"],a:1},
+{n:12,q:"¿Cómo se llama nuestra galaxia?",o:["Andrómeda", "Vía Láctea", "Galaxia Solar"],a:1},
+{n:13,q:"¿Qué es una galaxia?",o:["Un solo planeta", "Un conjunto de estrellas, gas y polvo unido por gravedad", "Una estación espacial"],a:1},
+{n:14,q:"¿Qué es un año luz?",o:["Una unidad de tiempo", "Una unidad de distancia", "La velocidad de la luz"],a:1},
+{n:15,q:"¿Qué instrumento utiliza NASA para observar objetos muy lejanos en el espacio?",o:["Telescopios espaciales", "Barómetros", "Microscopios"],a:0},
+{n:16,q:"¿Qué telescopio espacial fue lanzado en 2021?",o:["Hubble", "James Webb", "Kepler"],a:1},
+{n:17,q:"¿Qué estudia principalmente un telescopio?",o:["Objetos y fenómenos astronómicos", "Solo el clima", "Los océanos"],a:0},
+{n:18,q:"¿Qué es una nebulosa?",o:["Una nube de gas y polvo en el espacio", "Un tipo de planeta", "Una estación espacial"],a:0},
+{n:19,q:"¿Dónde nacen muchas estrellas?",o:["En nebulosas", "En agujeros negros", "En cometas"],a:0},
+{n:20,q:"¿Qué proceso produce la energía de las estrellas?",o:["Fusión nuclear", "Combustión", "Congelación"],a:0},
+{n:21,q:"¿Qué es un agujero negro?",o:["Una región con gravedad extremadamente intensa", "Un planeta sin atmósfera", "Una estrella hueca"],a:0},
+{n:22,q:"¿Puede la luz escapar de un agujero negro una vez dentro del horizonte de sucesos?",o:["Sí, siempre", "No", "Solo durante el día"],a:1},
+{n:23,q:"¿Qué planeta tiene la Gran Mancha Roja?",o:["Júpiter", "Marte", "Saturno"],a:0},
+{n:24,q:"¿Cuál es el planeta más caliente del Sistema Solar en promedio?",o:["Mercurio", "Venus", "Marte"],a:1},
+{n:25,q:"¿Qué planeta tiene una inclinación extrema y parece girar de lado?",o:["Urano", "Neptuno", "Saturno"],a:0},
+{n:26,q:"¿Cuál es el satélite natural de la Tierra?",o:["Europa", "La Luna", "Titán"],a:1},
+{n:27,q:"¿Qué causa principalmente las fases de la Luna?",o:["La posición relativa entre Sol, Tierra y Luna", "Las nubes", "El campo magnético terrestre"],a:0},
+{n:28,q:"¿Qué ocurre durante un eclipse solar?",o:["La Tierra queda entre el Sol y la Luna", "La Luna se coloca entre el Sol y la Tierra", "El Sol desaparece"],a:1},
+{n:29,q:"¿Qué ocurre durante un eclipse lunar?",o:["La Tierra se coloca entre el Sol y la Luna", "La Luna se coloca entre el Sol y la Tierra", "Marte bloquea al Sol"],a:0},
+{n:30,q:"¿Qué es un asteroide?",o:["Un cuerpo rocoso o metálico que orbita el Sol", "Una estrella pequeña", "Una nube de gas"],a:0},
+{n:31,q:"¿Qué es un cometa?",o:["Un cuerpo rico en hielos y polvo que orbita el Sol", "Un planeta gigante", "Una luna artificial"],a:0},
+{n:32,q:"¿Qué produce la cola de un cometa cuando se acerca al Sol?",o:["La interacción de sus materiales con la radiación y el viento solar", "La gravedad de la Tierra", "La luz de la Luna"],a:0},
+{n:33,q:"¿Qué es la Estación Espacial Internacional?",o:["Un laboratorio en órbita", "Un telescopio en la Luna", "Una base submarina"],a:0},
+{n:34,q:"¿En qué órbita se encuentra la Estación Espacial Internacional?",o:["Órbita baja terrestre", "Órbita alrededor de Marte", "Órbita lunar"],a:0},
+{n:35,q:"¿Qué hacen los astronautas durante una caminata espacial?",o:["Realizan tareas fuera de una nave o estación espacial", "Viajan a otra galaxia", "Controlan el clima terrestre"],a:0},
+{n:36,q:"¿Por qué los astronautas parecen flotar en la Estación Espacial Internacional?",o:["Porque están en microgravedad y en caída libre orbital", "Porque no existe gravedad en el espacio", "Porque usan zapatos magnéticos"],a:0},
+{n:37,q:"¿Qué necesitan los astronautas para respirar dentro de una nave espacial?",o:["Un sistema que proporcione oxígeno y controle el aire", "Solo agua", "Gravedad artificial obligatoria"],a:0},
+{n:38,q:"¿Qué agencia espacial realizó las misiones Apollo?",o:["NASA", "ESA", "JAXA"],a:0},
+{n:39,q:"¿Qué país puso en órbita al primer satélite artificial, Sputnik 1?",o:["Estados Unidos", "Unión Soviética", "Japón"],a:1},
+{n:40,q:"¿Cómo se llamaba el primer transbordador espacial que orbitó la Tierra en una misión de prueba?",o:["Columbia", "Enterprise", "Atlantis"],a:1},
+{n:41,q:"¿Qué rover de NASA aterrizó en Marte en 2021?",o:["Curiosity", "Perseverance", "Spirit"],a:1},
+{n:42,q:"¿Qué helicóptero realizó el primer vuelo controlado y propulsado en otro planeta?",o:["Ingenuity", "Dragonfly", "Hubble"],a:0},
+{n:43,q:"¿En qué planeta voló Ingenuity?",o:["Marte", "Venus", "Júpiter"],a:0},
+{n:44,q:"¿Qué busca estudiar el rover Perseverance?",o:["Geología marciana y posibles señales de vida antigua, entre otros objetivos", "Los océanos terrestres", "La superficie del Sol"],a:0},
+{n:45,q:"¿Qué misión llevó astronautas alrededor de la Luna y probó sistemas para futuras misiones Artemis?",o:["Artemis I", "Apollo 11", "Voyager 1"],a:0},
+{n:46,q:"¿Qué programa de NASA busca llevar astronautas nuevamente a la Luna?",o:["Artemis", "Gemini", "Mercury"],a:0},
+{n:47,q:"¿Qué planeta es famoso por tener el mayor volcán conocido del Sistema Solar, Olympus Mons?",o:["Marte", "Venus", "Mercurio"],a:0},
+{n:48,q:"¿Cómo se llama el mayor volcán conocido del Sistema Solar?",o:["Olympus Mons", "Mauna Kea", "Monte Everest"],a:0},
+{n:49,q:"¿Qué ocurre con el cuerpo de un astronauta sin traje en el vacío espacial?",o:["No puede sobrevivir sin protección; el vacío provoca una emergencia extrema", "Se congela instantáneamente como una estatua", "Puede respirar normalmente"],a:0},
+{n:50,q:"¿Qué estudia la astronomía?",o:["Los objetos y fenómenos del universo", "Solo los aviones", "Solo los volcanes terrestres"],a:0}
+];
+
+var IMG_BASE = 'trivia_imagenes/';
+var state = { view:'menu', idx:0, score:0, answered:false };
+
+/* ---------- Navegación entre pantallas ---------- */
+function setView(v){
+  state.view = v;
+  ['menu','trivia','result','apod'].forEach(function(name){
+    document.getElementById('v-'+name).classList.toggle('on', name===v);
+  });
+  document.getElementById('dock').style.display = (v==='menu') ? 'flex' : 'none';
+  window.scrollTo(0,0);
+}
+function showMenu(){ setView('menu'); }
+
+/* Botón regresar (‹): desde menú vuelve a GEONOSIS home; en otras vistas vuelve al menú */
+function handleBack(){
+  if(state.view==='menu'){ goHome(); }
+  else { showMenu(); }
+}
+function goHome(){
+  try{ if(window.AppInventor && window.AppInventor.setWebViewString){ window.AppInventor.setWebViewString('home'); } }catch(e){}
+  location.href='home.html';
+}
+
+/* ---------- TRIVIA ---------- */
+function startTrivia(){
+  state.idx=0; state.score=0; state.answered=false;
+  setView('trivia');
+  renderQuestion();
+}
+function pad(n){ return (n<10?'0':'')+n; }
+function renderQuestion(){
+  state.answered=false;
+  var q = QUESTIONS[state.idx];
+  document.getElementById('counter').textContent = 'Pregunta '+(state.idx+1)+' / '+QUESTIONS.length;
+  document.getElementById('scoreLbl').textContent = 'Aciertos: '+state.score;
+  document.getElementById('bar').style.width = ((state.idx+1)/QUESTIONS.length*100)+'%';
+  var img = document.getElementById('qimg');
+  img.src = IMG_BASE + pad(q.n) + '.jpg';
+  img.onerror = function(){ img.style.visibility='hidden'; };
+  img.style.visibility='visible';
+  document.getElementById('qtext').textContent = q.q;
+  var letters = ['A','B','C','D'];
+  var opts = document.getElementById('opts');
+  opts.innerHTML='';
+  q.o.forEach(function(text, i){
+    var d = document.createElement('div');
+    d.className='opt';
+    d.innerHTML = '<span class="k">'+letters[i]+'</span><span>'+text+'</span>';
+    d.onclick = function(){ answer(i, d); };
+    opts.appendChild(d);
+  });
+  var fb = document.getElementById('feedback');
+  fb.className='feedback'; fb.textContent='';
+  document.getElementById('nextBtn').style.display='none';
+}
+function answer(i, el){
+  if(state.answered) return;
+  state.answered=true;
+  var q = QUESTIONS[state.idx];
+  var nodes = document.querySelectorAll('#opts .opt');
+  nodes.forEach(function(n){ n.classList.add('locked'); });
+  var fb = document.getElementById('feedback');
+  if(i === q.a){
+    el.classList.add('correct');
+    state.score++;
+    fb.className='feedback show ok';
+    fb.textContent='✅ ¡Correcto!';
+  } else {
+    el.classList.add('wrong');
+    nodes[q.a].classList.add('correct');
+    fb.className='feedback show no';
+    fb.textContent='❌ Incorrecto. Respuesta correcta: '+['A','B','C','D'][q.a]+') '+q.o[q.a];
+  }
+  document.getElementById('scoreLbl').textContent = 'Aciertos: '+state.score;
+  var btn = document.getElementById('nextBtn');
+  btn.textContent = (state.idx === QUESTIONS.length-1) ? 'Ver resultado ›' : 'Siguiente ›';
+  btn.style.display='block';
+}
+function nextQuestion(){
+  if(state.idx < QUESTIONS.length-1){ state.idx++; renderQuestion(); }
+  else { showResult(); }
+}
+function showResult(){
+  setView('result');
+  var s = state.score, t = QUESTIONS.length;
+  document.getElementById('finalScore').textContent = s+' / '+t;
+  var pct = s/t;
+  var title, msg;
+  if(pct===1){ title='🏆 ¡Perfecto!'; msg='Dominas el cosmos. ¡Eres todo un experto de la NASA!'; }
+  else if(pct>=0.8){ title='🚀 ¡Excelente!'; msg='Gran conocimiento espacial. Estás listo para la misión.'; }
+  else if(pct>=0.6){ title='🌟 ¡Muy bien!'; msg='Buen nivel. Repasa un poco y llegarás a las estrellas.'; }
+  else if(pct>=0.4){ title='🛰️ Vas bien'; msg='Sigue explorando el universo, cada intento suma.'; }
+  else { title='🌱 A despegar'; msg='El espacio es enorme. ¡Inténtalo de nuevo y mejora tu marca!'; }
+  document.getElementById('finalTitle').textContent = title;
+  document.getElementById('finalMsg').textContent = msg;
+}
+
+/* ---------- APOD (Foto del día) ---------- */
+var apodLoaded=false;
+function showApod(){
+  setView('apod');
+  if(apodLoaded) return;
+  loadApod();
+}
+function loadApod(){
+  document.getElementById('apodLoader').classList.add('on');
+  document.getElementById('apodErr').classList.remove('on');
+  document.getElementById('apodContent').style.display='none';
+  var url='https://api.nasa.gov/planetary/apod?api_key='+NASA_KEY;
+  fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(function(d){
+    renderApod(d);
+    apodLoaded=true;
+  }).catch(function(e){
+    document.getElementById('apodLoader').classList.remove('on');
+    var err=document.getElementById('apodErr');
+    err.classList.add('on');
+    err.textContent='⚠️ No se pudo cargar la imagen del día. Puede ser el límite de la API (DEMO_KEY) o falta de conexión. Reintenta más tarde o coloca tu propia API key.';
+  });
+}
+function renderApod(d){
+  document.getElementById('apodLoader').classList.remove('on');
+  var wrap=document.getElementById('apodMediaWrap');
+  wrap.innerHTML='';
+  if(d.media_type==='video'){
+    var f=document.createElement('iframe');
+    f.className='apod-frame'; f.src=d.url; f.allowFullscreen=true; f.frameBorder='0';
+    wrap.appendChild(f);
+  } else {
+    var im=document.createElement('img');
+    im.className='apod-media'; im.src=(d.hdurl||d.url); im.alt=d.title||'APOD';
+    wrap.appendChild(im);
+  }
+  document.getElementById('apodTitle').textContent = d.title||'Imagen astronómica del día';
+  document.getElementById('apodDate').textContent = '📅 '+(d.date||'');
+  document.getElementById('apodExp').textContent = d.explanation||'';
+  document.getElementById('apodCred').textContent = d.copyright ? ('© '+d.copyright+' · NASA APOD') : 'Fuente: NASA APOD';
+  document.getElementById('apodContent').style.display='block';
+}
+
+/* Interceptar botón físico "atrás" de App Inventor si envía señal */
+setView('menu');
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
