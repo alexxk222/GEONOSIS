@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEONOSIS AR — Cielo en Tiempo Real</title>
+
+<!-- Fuentes -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+
+<!-- Motor AR / 3D -->
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.4.0/dist/aframe-master.min.js"></script>
+<!-- Propagador orbital SGP4 REAL -->
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0a0a1a; color:#fff;
+    font-family:'Exo 2',sans-serif; }
+
+  a-scene { position:fixed !important; top:0; left:0; width:100% !important; height:100% !important; z-index:1; }
+
+  /* Video de cámara de fondo (AR passthrough) */
+  #camFeed { position:fixed; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:0;
+    background:#05050f; }
+
+  /* ---------- HUD SUPERIOR ---------- */
+  .hud-top { position:fixed; top:0; left:0; width:100%; z-index:20;
+    background:linear-gradient(180deg, rgba(10,10,26,0.92) 0%, rgba(10,10,26,0.55) 75%, transparent 100%);
+    padding:10px 14px 22px; pointer-events:none; }
+  .hud-title { font-family:'Orbitron',sans-serif; font-weight:900; font-size:16px; letter-spacing:3px;
+    background:linear-gradient(90deg,#00d4ff,#7b2fff); -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent; background-clip:text; }
+  .hud-sub { font-size:10px; color:rgba(255,255,255,.55); letter-spacing:1px; margin-top:1px; }
+  .hud-grid { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; }
+  .hud-item { font-size:11px; color:#b9f5ff; }
+  .hud-item b { color:#7b2fff; font-weight:600; }
+  .hud-count { color:#00d4ff; font-weight:700; }
+
+  /* ---------- BOTONES DE MODO ---------- */
+  .mode-bar { position:fixed; bottom:64px; left:0; width:100%; z-index:20;
+    display:flex; gap:6px; padding:0 10px; justify-content:center; }
+  .mode-btn { flex:1; max-width:110px; padding:9px 4px; border:1px solid rgba(0,212,255,.35);
+    border-radius:10px; background:rgba(10,10,26,.7); color:#cfe9ff; font-family:'Exo 2',sans-serif;
+    font-size:10px; font-weight:600; letter-spacing:.5px; cursor:pointer; backdrop-filter:blur(6px);
+    transition:all .18s; text-transform:uppercase; }
+  .mode-btn .ic { display:block; font-size:16px; margin-bottom:2px; }
+  .mode-btn.active { border-color:#00d4ff; background:rgba(0,212,255,.16); color:#fff;
+    box-shadow:0 0 14px rgba(0,212,255,.4); }
+
+  /* ---------- NAV INFERIOR ---------- */
+  .nav-bar { position:fixed; bottom:12px; left:0; width:100%; z-index:20;
+    display:flex; gap:10px; padding:0 12px; }
+  .nav-btn { flex:1; padding:11px; border:none; border-radius:10px; font-family:'Orbitron',sans-serif;
+    font-weight:700; font-size:11px; letter-spacing:1px; cursor:pointer; text-transform:uppercase; }
+  .nav-btn:active { transform:scale(.96); }
+  .btn-home { background:linear-gradient(135deg,#7b2fff,#5a1fc0); color:#fff; }
+  .btn-refresh { background:linear-gradient(135deg,#00d4ff,#0098c7); color:#04121a; }
+
+  /* ---------- CARGA ---------- */
+  .loader { position:fixed; inset:0; z-index:60; background:rgba(6,6,16,.96);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+    padding:30px; }
+  .loader.hidden { display:none; }
+  .orbit-spin { width:70px; height:70px; position:relative; margin-bottom:20px; }
+  .orbit-spin::before, .orbit-spin::after { content:''; position:absolute; inset:0; border-radius:50%;
+    border:2px solid transparent; }
+  .orbit-spin::before { border-top-color:#00d4ff; animation:spin 1s linear infinite; }
+  .orbit-spin::after { border-bottom-color:#7b2fff; animation:spin 1.6s linear infinite reverse; inset:10px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loader h2 { font-family:'Orbitron',sans-serif; font-size:18px; letter-spacing:3px; margin-bottom:6px;
+    background:linear-gradient(90deg,#00d4ff,#7b2fff); -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent; }
+  #loadMsg { font-size:12px; color:#8fa9c9; max-width:280px; line-height:1.5; }
+  .load-progress { width:200px; height:4px; background:rgba(255,255,255,.1); border-radius:4px; margin-top:16px;
+    overflow:hidden; }
+  .load-progress i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#00d4ff,#7b2fff);
+    transition:width .4s; }
+
+  /* ---------- TOAST / ERRORES ---------- */
+  #toast { position:fixed; bottom:120px; left:50%; transform:translateX(-50%); z-index:70;
+    max-width:88%; background:rgba(20,6,10,.95); border:1px solid #ff4d6d; color:#ffb3c0;
+    padding:12px 16px; border-radius:10px; font-size:12px; text-align:center; display:none;
+    box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  #toast.warn { border-color:#ffb020; color:#ffe0a3; background:rgba(26,18,4,.95); }
+  #toast.ok { border-color:#00d4ff; color:#b9f5ff; background:rgba(4,18,26,.95); }
+
+  /* ---------- POPUP DETALLE ---------- */
+  .sheet { position:fixed; left:0; bottom:0; width:100%; z-index:80; transform:translateY(110%);
+    transition:transform .28s cubic-bezier(.2,.8,.2,1); }
+  .sheet.open { transform:translateY(0); }
+  .sheet-inner { margin:0 10px 10px; background:rgba(12,14,30,.97); border:1px solid rgba(0,212,255,.4);
+    border-radius:16px; padding:16px 18px 18px; backdrop-filter:blur(10px);
+    box-shadow:0 -6px 30px rgba(0,0,0,.6); }
+  .sheet-title { font-family:'Orbitron',sans-serif; font-weight:700; font-size:15px; color:#fff;
+    letter-spacing:1px; padding-right:30px; }
+  .sheet-tag { display:inline-block; font-size:10px; padding:2px 8px; border-radius:20px; margin-top:6px;
+    font-weight:600; letter-spacing:.5px; }
+  .tag-sat { background:rgba(0,212,255,.18); color:#00d4ff; }
+  .tag-deb { background:rgba(255,200,0,.18); color:#ffd23f; }
+  .tag-ast { background:rgba(255,120,0,.18); color:#ff9d42; }
+  .tag-danger { background:rgba(255,60,90,.2); color:#ff5f7a; }
+  .tag-cme { background:rgba(123,47,255,.22); color:#b98bff; }
+  .sheet-rows { margin-top:12px; }
+  .sheet-row { display:flex; justify-content:space-between; gap:12px; padding:6px 0;
+    border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; }
+  .sheet-row span { color:#8fa9c9; }
+  .sheet-row b { color:#e8f6ff; font-weight:600; text-align:right; }
+  .sheet-close { position:absolute; top:12px; right:20px; width:26px; height:26px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.2); background:transparent; color:#fff; font-size:14px;
+    cursor:pointer; line-height:1; }
+
+  /* Botón permiso sensores (iOS) */
+  #permBtn { position:fixed; z-index:75; bottom:120px; left:50%; transform:translateX(-50%);
+    background:linear-gradient(135deg,#00d4ff,#7b2fff); color:#04121a; border:none; padding:12px 20px;
+    border-radius:24px; font-family:'Orbitron',sans-serif; font-weight:700; font-size:12px; letter-spacing:1px;
+    cursor:pointer; display:none; box-shadow:0 4px 18px rgba(0,212,255,.5); }
+
+  .compass { position:fixed; top:96px; right:12px; z-index:20; font-size:10px; color:#8fa9c9;
+    text-align:center; pointer-events:none; }
+  .compass b { display:block; font-family:'Orbitron',sans-serif; font-size:14px; color:#00d4ff; }
+</style>
+</head>
+<body>
+
+<!-- Cámara de fondo -->
+<video id="camFeed" autoplay muted playsinline></video>
+
+<!-- Escena AR -->
+<a-scene renderer="alpha:true; antialias:true; colorManagement:true" vr-mode-ui="enabled:false"
+         embedded device-tilt>
+  <a-entity id="skyRoot">
+    <a-entity id="objSats"></a-entity>
+    <a-entity id="objDebris"></a-entity>
+    <a-entity id="objAst"></a-entity>
+    <a-entity id="objWeather"></a-entity>
+    <a-entity id="objTrail"></a-entity>
+  </a-entity>
+  <a-entity id="cam" camera look-controls="magicWindowTrackingEnabled:true; touchEnabled:true"
+            position="0 0 0"></a-entity>
+  <!-- Raycaster de ratón/tacto para detectar toques sobre los objetos 3D -->
+  <a-entity id="mouseCursor" cursor="rayOrigin: mouse; fuse: false"
+            raycaster="objects: .clickable; far: 300"></a-entity>
+</a-scene>
+
+<!-- HUD -->
+<div class="hud-top">
+  <div class="hud-title">GEONOSIS AR</div>
+  <div class="hud-sub" id="clock">—</div>
+  <div class="hud-grid">
+    <div class="hud-item"><b>GPS:</b> <span id="hGps">buscando…</span></div>
+    <div class="hud-item"><b>Clima esp.:</b> <span id="hWx">—</span></div>
+    <div class="hud-item"><b id="hCountLabel">Visibles:</b> <span class="hud-count" id="hCount">0</span></div>
+  </div>
+</div>
+
+<div class="compass"><b id="compassDeg">—</b>rumbo</div>
+
+<!-- Modos -->
+<div class="mode-bar">
+  <button class="mode-btn active" data-mode="sat" onclick="setMode('sat')"><span class="ic">🛰️</span>Satélites</button>
+  <button class="mode-btn" data-mode="deb" onclick="setMode('deb')"><span class="ic">🟡</span>Basura</button>
+  <button class="mode-btn" data-mode="ast" onclick="setMode('ast')"><span class="ic">☄️</span>Asteroides</button>
+  <button class="mode-btn" data-mode="wx" onclick="setMode('wx')"><span class="ic">🌊</span>Clima esp.</button>
+</div>
+
+<!-- Navegación -->
+<div class="nav-bar">
+  <button class="nav-btn btn-home" onclick="goHome()">◄ Inicio</button>
+  <button class="nav-btn btn-refresh" onclick="refreshAll()">⟳ Actualizar</button>
+</div>
+
+<!-- Permiso sensores iOS -->
+<button id="permBtn" onclick="requestSensors()">🧭 Activar brújula y sensores</button>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Sheet detalle -->
+<div class="sheet" id="sheet">
+  <div class="sheet-inner">
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+    <div class="sheet-title" id="shTitle">—</div>
+    <div id="shTag"></div>
+    <div class="sheet-rows" id="shRows"></div>
+  </div>
+</div>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <div class="orbit-spin"></div>
+  <h2>GEONOSIS AR</h2>
+  <div id="loadMsg">Inicializando…</div>
+  <div class="load-progress"><i id="loadBar"></i></div>
+</div>
+
+<script>
+/* =====================================================================
+   GEONOSIS AR — Datos reales en tiempo real
+   Satélites/Basura: TLE CelesTrak + propagador SGP4 (satellite.js)
+   Asteroides: NASA NeoWs   |   Clima espacial: NASA DONKI
+   ===================================================================== */
+
+// ---- CONFIG ----
+const NASA_KEY = 'lJ8tKcuAJF8l6yF9jV95LV501AGFOv2g87cKj6hU'; // <<< REEMPLAZA con tu API key de https://api.nasa.gov (DEMO_KEY = ~30 req/hora)
+const DEG = Math.PI/180, RAD = 180/Math.PI;
+const R_SPHERE = 100;              // radio de la esfera celeste en la escena
+const MAX_RENDER = 70;             // máximo de objetos dibujados por modo
+const TLE_CACHE_H = 2;             // horas de caché de TLE
+const API_CACHE_MIN = 30;         // minutos de caché de NeoWs/DONKI
+const DEFAULT_LOC = { lat:19.4326, lng:-99.1332, alt:0.24, fake:true }; // CDMX (solo si no hay GPS)
+
+// Grupos CelesTrak
+const SAT_GROUPS = ['stations','visual','gps-ops'];
+const DEBRIS_GROUPS = ['cosmos-2251-debris','iridium-33-debris','1999-025'];
+const CT = g => `https://celestrak.org/NORAD/elements/gp.php?GROUP=${g}&FORMAT=tle`;
+
+// ---- ESTADO ----
+let observer = null;        // {latitude, longitude, height} en rad/km
+let mode = 'sat';
+let heading = 0;            // rumbo brújula (grados)
+let store = { sat:[], deb:[], ast:[], wx:null };  // datos crudos
+let visibleObjs = { sat:[], deb:[] };             // los que están sobre el horizonte
+let tickTimer = null;
+
+// ===================== UTILIDADES =====================
+const $ = id => document.getElementById(id);
+function setLoad(msg, pct){ $('loadMsg').textContent = msg; if(pct!=null) $('loadBar').style.width = pct+'%'; }
+function hideLoader(){ $('loader').classList.add('hidden'); }
+function showLoader(){ $('loader').classList.remove('hidden'); }
+let toastT;
+function toast(msg, type){
+  const t=$('toast'); t.textContent=msg; t.className=type||''; t.style.display='block';
+  clearTimeout(toastT); toastT=setTimeout(()=>{ t.style.display='none'; }, 5200);
+}
+
+// Caché en localStorage con expiración
+function cacheGet(key, maxMin){
+  try{
+    const raw = localStorage.getItem(key); if(!raw) return null;
+    const o = JSON.parse(raw);
+    if(Date.now() - o.t > maxMin*60000) return null;
+    return o.d;
+  }catch(e){ return null; }
+}
+function cacheSet(key, data){
+  try{ localStorage.setItem(key, JSON.stringify({t:Date.now(), d:data})); }catch(e){}
+}
+
+// ===================== GEOLOCALIZACIÓN =====================
+function getLocation(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation){ useDefaultLoc('sin API de GPS'); return resolve(); }
+    navigator.geolocation.getCurrentPosition(
+      p=>{
+        observer = { latitude:p.coords.latitude*DEG, longitude:p.coords.longitude*DEG,
+                     height:(p.coords.altitude||0)/1000 };
+        $('hGps').textContent = p.coords.latitude.toFixed(3)+'°, '+p.coords.longitude.toFixed(3)+'°';
+        resolve();
+      },
+      err=>{ useDefaultLoc('GPS no disponible'); resolve(); },
+      { enableHighAccuracy:true, timeout:8000, maximumAge:60000 }
+    );
+  });
+}
+function useDefaultLoc(reason){
+  observer = { latitude:DEFAULT_LOC.lat*DEG, longitude:DEFAULT_LOC.lng*DEG, height:DEFAULT_LOC.alt };
+  $('hGps').textContent = 'CDMX (demo)';
+  toast('⚠️ '+reason+'. Usando Ciudad de México por defecto — en el celular se usará tu GPS real.','warn');
+}
+
+// ===================== TLE / SGP4 =====================
+async function fetchTLE(group){
+  const key = 'tle_'+group;
+  const cached = cacheGet(key, TLE_CACHE_H*60);
+  if(cached) return parseTLE(cached);
+  const res = await fetch(CT(group));
+  if(!res.ok) throw new Error('CelesTrak '+group+' HTTP '+res.status);
+  const txt = await res.text();
+  if(txt.length < 50 || /error/i.test(txt.slice(0,80))) throw new Error('CelesTrak '+group+' sin datos');
+  cacheSet(key, txt);
+  return parseTLE(txt);
+}
+function parseTLE(txt){
+  const lines = txt.split(/\r?\n/).filter(l=>l.trim().length);
+  const out=[];
+  for(let i=0;i+2<lines.length;i+=3){
+    const name=lines[i].trim(), l1=lines[i+1].trim(), l2=lines[i+2].trim();
+    if(l1[0]==='1' && l2[0]==='2'){
+      out.push({ name, l1, l2, norad:l1.slice(2,7).trim() });
+    }
+  }
+  return out;
+}
+
+// Propaga un TLE a la fecha dada -> {az, el, altKm, speedKms, ok}
+function propagate(tle, date){
+  try{
+    const satrec = satellite.twoline2satrec(tle.l1, tle.l2);
+    const pv = satellite.propagate(satrec, date);
+    if(!pv.position) return {ok:false};
+    const gmst = satellite.gstime(date);
+    const ecf = satellite.eciToEcf(pv.position, gmst);
+    const look = satellite.ecfToLookAngles(observer, ecf);
+    const geo = satellite.eciToGeodetic(pv.position, gmst);
+    const v = pv.velocity;
+    const speed = v ? Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z) : null;
+    return {
+      ok:true,
+      az: look.azimuth*RAD,          // 0-360 desde el Norte
+      el: look.elevation*RAD,        // grados sobre horizonte
+      rangeKm: look.rangeSat,
+      altKm: geo.height,
+      speedKms: speed
+    };
+  }catch(e){ return {ok:false}; }
+}
+
+// az/el (grados) -> posición 3D en esfera celeste (A-Frame: -Z norte, +X este, +Y arriba)
+function azelToXYZ(az, el, r){
+  const a=az*DEG, e=el*DEG;
+  return {
+    x: r*Math.cos(e)*Math.sin(a),
+    y: r*Math.sin(e),
+    z: -r*Math.cos(e)*Math.cos(a)
+  };
+}
+
+// ===================== RENDER SATÉLITES / BASURA =====================
+function computeVisible(list, date){
+  const vis=[];
+  for(const tle of list){
+    const p = propagate(tle, date);
+    if(p.ok && p.el > 0){ vis.push({ tle, ...p }); }
+  }
+  vis.sort((a,b)=>b.el-a.el);           // los más altos primero
+  return vis.slice(0, MAX_RENDER);
+}
+
+function renderPoints(containerId, visList, kind){
+  const c=$(containerId); c.innerHTML='';
+  const color = kind==='deb' ? '#ffd23f' : '#00d4ff';
+  visList.forEach((o,idx)=>{
+    const pos = azelToXYZ(o.az, o.el, R_SPHERE);
+    const wrap=document.createElement('a-entity');
+    wrap.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+
+    const dot=document.createElement('a-sphere');
+    dot.setAttribute('radius', kind==='deb' ? 1.1 : 1.4);
+    dot.setAttribute('color', color);
+    dot.setAttribute('material', `emissive:${color}; emissiveIntensity:0.9; shader:flat`);
+    dot.setAttribute('class','clickable');
+    // halo/glow
+    const glow=document.createElement('a-sphere');
+    glow.setAttribute('radius', kind==='deb' ? 2.4 : 2.8);
+    glow.setAttribute('color', color);
+    glow.setAttribute('material', `opacity:0.22; transparent:true; shader:flat`);
+    if(kind==='deb'){ dot.setAttribute('animation', 'property:scale; to:1.4 1.4 1.4; dir:alternate; loop:true; dur:700'); }
+
+    const label=document.createElement('a-text');
+    label.setAttribute('value', o.tle.name.slice(0,18));
+    label.setAttribute('align','center');
+    label.setAttribute('color', color);
+    label.setAttribute('position','0 3.4 0');
+    label.setAttribute('scale','9 9 9');
+    label.setAttribute('look-at','#cam');
+
+    wrap.appendChild(glow); wrap.appendChild(dot); wrap.appendChild(label);
+    wrap.addEventListener('click', ()=> showSatSheet(o, kind));
+    // También abrir al tocar la esfera directamente
+    dot.addEventListener('click', ()=> showSatSheet(o, kind));
+    c.appendChild(wrap);
+  });
+}
+
+function showSatSheet(o, kind){
+  const tag = kind==='deb'
+    ? '<span class="sheet-tag tag-deb">🟡 Basura espacial · no operativo</span>'
+    : '<span class="sheet-tag tag-sat">🛰️ Satélite activo</span>';
+  const rows = [
+    ['NORAD ID', o.tle.norad],
+    ['Azimut', o.az.toFixed(1)+'° ('+compassName(o.az)+')'],
+    ['Elevación', o.el.toFixed(1)+'° sobre horizonte'],
+    ['Altitud', o.altKm ? o.altKm.toFixed(0)+' km' : '—'],
+    ['Distancia', o.rangeKm ? o.rangeKm.toFixed(0)+' km' : '—'],
+    ['Velocidad', o.speedKms ? (o.speedKms).toFixed(2)+' km/s ('+(o.speedKms*3600).toFixed(0)+' km/h)' : '—']
+  ];
+  openSheet(o.tle.name, tag, rows);
+  drawTrajectory(o.tle, kind);
+}
+
+// ---- TRAYECTORIA ORBITAL REAL (próximos 90 min) ----
+function drawTrajectory(tle, kind){
+  const c=$('objTrail'); c.innerHTML='';
+  const color = kind==='deb' ? '#ffd23f' : '#7b2fff';
+  const now = new Date();
+  for(let m=0; m<=95; m+=1.5){
+    const t=new Date(now.getTime()+m*60000);
+    const p=propagate(tle, t);
+    if(p.ok && p.el>-2){
+      const pos=azelToXYZ(p.az, Math.max(p.el,0), R_SPHERE*0.985);
+      const d=document.createElement('a-sphere');
+      d.setAttribute('radius', 0.5);
+      d.setAttribute('color', color);
+      d.setAttribute('material', `emissive:${color}; emissiveIntensity:0.8; shader:flat; opacity:0.85; transparent:true`);
+      d.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+      c.appendChild(d);
+    }
+  }
+}
+
+// ===================== ASTEROIDES (NeoWs) =====================
+async function fetchAsteroids(){
+  const today = new Date().toISOString().split('T')[0];
+  const key='neo_'+today;
+  let data = cacheGet(key, API_CACHE_MIN);
+  if(!data){
+    const url=`https://api.nasa.gov/neo/rest/v1/feed?start_date=${today}&end_date=${today}&api_key=${NASA_KEY}`;
+    const res=await fetch(url);
+    if(res.status===429) throw new Error('LIMIT');
+    if(!res.ok) throw new Error('NeoWs HTTP '+res.status);
+    const j=await res.json();
+    data = j.near_earth_objects[today] || [];
+    cacheSet(key, data);
+  }
+  return data;
+}
+function renderAsteroids(list){
+  const c=$('objAst'); c.innerHTML='';
+  // Distribuir en el cielo por hash del nombre (posición referencial; NeoWs no da az/el instantáneo)
+  list.slice(0, MAX_RENDER).forEach((a,i)=>{
+    const az=(i*47)%360, el=15+((i*29)%60);
+    const pos=azelToXYZ(az, el, R_SPHERE*0.92);
+    const danger=a.is_potentially_hazardous_asteroid;
+    const color= danger ? '#ff3b5c' : '#ff9d42';
+    const wrap=document.createElement('a-entity');
+    wrap.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+    const rock=document.createElement('a-dodecahedron');
+    rock.setAttribute('radius', 2.2);
+    rock.setAttribute('class','clickable');
+    rock.setAttribute('color', color);
+    rock.setAttribute('material', `emissive:${color}; emissiveIntensity:0.5; roughness:1`);
+    rock.setAttribute('animation','property:rotation; to:360 360 0; loop:true; dur:9000; easing:linear');
+    const label=document.createElement('a-text');
+    label.setAttribute('value', a.name.replace(/[()]/g,'').slice(0,20));
+    label.setAttribute('align','center'); label.setAttribute('color',color);
+    label.setAttribute('position','0 4 0'); label.setAttribute('scale','9 9 9');
+    label.setAttribute('look-at','#cam');
+    wrap.appendChild(rock); wrap.appendChild(label);
+    wrap.addEventListener('click',()=>showAstSheet(a));
+    rock.addEventListener('click',()=>showAstSheet(a));
+    c.appendChild(wrap);
+  });
+}
+function showAstSheet(a){
+  const ca=a.close_approach_data[0]||{};
+  const dmin=a.estimated_diameter.meters.estimated_diameter_min;
+  const dmax=a.estimated_diameter.meters.estimated_diameter_max;
+  const danger=a.is_potentially_hazardous_asteroid;
+  const tag= danger
+    ? '<span class="sheet-tag tag-danger">⚠️ Potencialmente peligroso</span>'
+    : '<span class="sheet-tag tag-ast">☄️ Asteroide cercano</span>';
+  const rows=[
+    ['Diámetro estimado', dmin.toFixed(0)+'–'+dmax.toFixed(0)+' m'],
+    ['Velocidad relativa', ca.relative_velocity ? (+ca.relative_velocity.kilometers_per_hour).toLocaleString('es-MX',{maximumFractionDigits:0})+' km/h' : '—'],
+    ['Distancia de paso', ca.miss_distance ? (+ca.miss_distance.kilometers).toLocaleString('es-MX',{maximumFractionDigits:0})+' km' : '—'],
+    ['Distancia lunar', ca.miss_distance ? (+ca.miss_distance.lunar).toFixed(1)+' LD' : '—'],
+    ['Aproximación', ca.close_approach_date_full || ca.close_approach_date || '—'],
+    ['Magnitud (H)', a.absolute_magnitude_h]
+  ];
+  openSheet(a.name.replace(/[()]/g,''), tag, rows);
+  $('objTrail').innerHTML='';
+}
+
+// ===================== CLIMA ESPACIAL (DONKI) =====================
+async function fetchWeather(){
+  const end=new Date().toISOString().split('T')[0];
+  const start=new Date(Date.now()-7*864e5).toISOString().split('T')[0];
+  const key='wx_'+end;
+  let data=cacheGet(key, API_CACHE_MIN);
+  if(!data){
+    const base=`https://api.nasa.gov/DONKI`;
+    const q=`startDate=${start}&endDate=${end}&api_key=${NASA_KEY}`;
+    let rateLimited=false;
+    const grab = async (ep)=>{
+      // Reintentos ante 503/500 (NASA DONKI a veces responde 503 de forma intermitente)
+      for(let intento=0; intento<4; intento++){
+        try{
+          const r=await fetch(`${base}/${ep}?${q}`);
+          if(r.status===429){ rateLimited=true; return []; }
+          if(r.ok) return await r.json();
+          if(r.status>=500){ await new Promise(res=>setTimeout(res, 800*(intento+1))); continue; }
+          return [];
+        }catch(err){ await new Promise(res=>setTimeout(res, 800*(intento+1))); }
+      }
+      return [];
+    };
+    const results = await Promise.allSettled([ grab('CME'), grab('FLR'), grab('GST') ]);
+    if(rateLimited) throw new Error('LIMIT');
+    data = {
+      cme: results[0].status==='fulfilled'? results[0].value:[],
+      flr: results[1].status==='fulfilled'? results[1].value:[],
+      gst: results[2].status==='fulfilled'? results[2].value:[],
+      failed: results.every(r=>r.status!=='fulfilled')
+    };
+    if(data.failed) throw new Error('DONKI no respondió');
+    cacheSet(key, data);
+  }
+  return data;
+}
+
+function renderWeather(w){
+  const c=$('objWeather'); c.innerHTML='';
+  // ---- SOL central ----
+  const sun=document.createElement('a-entity');
+  sun.setAttribute('position', `0 40 -60`);
+  const core=document.createElement('a-sphere');
+  core.setAttribute('radius', 7);
+  core.setAttribute('color','#ffcf40');
+  core.setAttribute('material','emissive:#ffb300; emissiveIntensity:1; shader:flat');
+  core.setAttribute('animation','property:scale; to:1.06 1.06 1.06; dir:alternate; loop:true; dur:1400');
+  const corona=document.createElement('a-sphere');
+  corona.setAttribute('radius', 11);
+  corona.setAttribute('color','#ff7b00');
+  corona.setAttribute('material','opacity:0.18; transparent:true; shader:flat');
+  sun.appendChild(corona); sun.appendChild(core);
+  c.appendChild(sun);
+
+  const cmes=(w.cme||[]);
+  // ---- ESTELAS CFD de cada CME real (líneas de flujo desde el Sol) ----
+  cmes.slice(0,12).forEach((cme,i)=>{
+    const an=(cme.cmeAnalyses&&cme.cmeAnalyses[0])||{};
+    const speed=an.speed||400;                 // km/s real
+    const lon=(an.longitude!=null?an.longitude:(i*30-180));  // grados
+    const lat=(an.latitude!=null?an.latitude:0);
+    const intensity=Math.min(1, speed/2000);
+    const col = speed>1500 ? '#ff3b5c' : speed>800 ? '#ff9d42' : '#00d4ff';
+    // dirección base de la eyección
+    const baseAz=lon, baseEl=lat;
+    // dibujar varias líneas de corriente ligeramente abiertas
+    for(let s=-2;s<=2;s++){
+      const streak=document.createElement('a-entity');
+      const spread=s*7;
+      for(let d=0; d<=34; d+=2){
+        const rr=13 + d*2.6;
+        const curve=Math.sin(d*0.13)*6*intensity;   // curvatura tipo flujo
+        const az=baseAz+spread+curve;
+        const el=baseEl + Math.cos(d*0.1)*2;
+        const p=azelToXYZ(az, el, 1);
+        const dot=document.createElement('a-sphere');
+        dot.setAttribute('radius', 0.5 + intensity*0.6*(1-d/40));
+        dot.setAttribute('color', col);
+        dot.setAttribute('material', `emissive:${col}; emissiveIntensity:0.9; shader:flat; opacity:${0.85-d/48}; transparent:true`);
+        // posición relativa al Sol
+        dot.setAttribute('position', `${p.x*rr} ${40+p.y*rr} ${-60+ -p.z*0 + (p.z*rr)}`);
+        streak.appendChild(dot);
+      }
+      streak.setAttribute('animation', `property:scale; from:0.6 0.6 0.6; to:1 1 1; dir:alternate; loop:true; dur:${1800+i*120}`);
+      c.appendChild(streak);
+    }
+    // nodo clicable con datos reales
+    const p0=azelToXYZ(baseAz, baseEl, 1);
+    const hit=document.createElement('a-sphere');
+    hit.setAttribute('radius', 3);
+    hit.setAttribute('class','clickable');
+    hit.setAttribute('color', col);
+    hit.setAttribute('material', `emissive:${col}; emissiveIntensity:0.7; shader:flat`);
+    hit.setAttribute('position', `${p0.x*30} ${40+p0.y*30} ${-60+p0.z*30}`);
+    hit.addEventListener('click', ()=>showCmeSheet(cme, an, speed));
+    c.appendChild(hit);
+  });
+
+  // ---- Llamaradas FLR: destellos alrededor del Sol ----
+  (w.flr||[]).slice(0,8).forEach((f,i)=>{
+    const az=i*45, el=8;
+    const p=azelToXYZ(az,el,1);
+    const flare=document.createElement('a-sphere');
+    flare.setAttribute('radius', 2);
+    flare.setAttribute('class','clickable');
+    flare.setAttribute('color','#fff3b0');
+    flare.setAttribute('material','emissive:#ffe680; emissiveIntensity:1; shader:flat');
+    flare.setAttribute('position', `${p.x*16} ${40+p.y*16} ${-60+p.z*16}`);
+    flare.setAttribute('animation','property:scale; to:1.8 1.8 1.8; dir:alternate; loop:true; dur:500');
+    flare.addEventListener('click',()=>{
+      openSheet('Llamarada solar '+(f.classType||''),
+        '<span class="sheet-tag tag-cme">☀️ Solar Flare (FLR)</span>',
+        [['Clase', f.classType||'—'],['Inicio', fmtDate(f.beginTime)],['Pico', fmtDate(f.peakTime)],
+         ['Región activa', f.activeRegionNum||'—'],['Fuente', f.sourceLocation||'—']]);
+    });
+    c.appendChild(flare);
+  });
+
+  // ---- Tormentas geomagnéticas GST: ondas ----
+  (w.gst||[]).slice(0,4).forEach((g,i)=>{
+    const ring=document.createElement('a-torus');
+    ring.setAttribute('radius', 26+i*8);
+    ring.setAttribute('radius-tubular', 0.4);
+    ring.setAttribute('class','clickable');
+    ring.setAttribute('color','#7b2fff');
+    ring.setAttribute('material','emissive:#7b2fff; emissiveIntensity:0.7; shader:flat; opacity:0.6; transparent:true');
+    ring.setAttribute('position','0 5 -50');
+    ring.setAttribute('rotation','90 0 0');
+    ring.setAttribute('animation','property:scale; from:0.7 0.7 0.7; to:1.3 1.3 1.3; dir:alternate; loop:true; dur:2600');
+    const kp=(g.allKpIndex&&g.allKpIndex[0])?g.allKpIndex[0].kpIndex:'—';
+    ring.addEventListener('click',()=>{
+      openSheet('Tormenta geomagnética',
+        '<span class="sheet-tag tag-cme">🌊 Geomagnetic Storm (GST)</span>',
+        [['Índice Kp', kp],['Inicio', fmtDate(g.startTime)],['Enlace', g.link?'NASA DONKI':'—']]);
+    });
+    c.appendChild(ring);
+  });
+}
+function showCmeSheet(cme, an, speed){
+  openSheet('Eyección de masa coronal',
+    '<span class="sheet-tag tag-cme">🌀 CME · viento solar</span>',
+    [['Velocidad', speed.toFixed(0)+' km/s'],
+     ['Tipo', an.type||'—'],
+     ['Longitud origen', an.longitude!=null? an.longitude+'°':'—'],
+     ['Latitud origen', an.latitude!=null? an.latitude+'°':'—'],
+     ['Semi-ángulo', an.halfAngle!=null? an.halfAngle+'°':'—'],
+     ['Hora', fmtDate(cme.startTime)]]);
+  $('objTrail').innerHTML='';
+}
+
+// ===================== SHEET / HELPERS =====================
+function openSheet(title, tagHtml, rows){
+  $('shTitle').textContent=title;
+  $('shTag').innerHTML=tagHtml||'';
+  $('shRows').innerHTML=rows.map(r=>`<div class="sheet-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+  $('sheet').classList.add('open');
+}
+function closeSheet(){ $('sheet').classList.remove('open'); $('objTrail').innerHTML=''; }
+function fmtDate(s){ if(!s) return '—'; try{ return new Date(s).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}); }catch(e){ return s; } }
+function compassName(az){
+  const dirs=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+  return dirs[Math.round(az/22.5)%16];
+}
+
+// ===================== MODOS =====================
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
+  ['objSats','objDebris','objAst','objWeather','objTrail'].forEach(id=>$(id).setAttribute('visible','false'));
+  closeSheet();
+  const labels={sat:'Visibles:',deb:'Fragmentos:',ast:'Asteroides hoy:',wx:'Eventos 7 días:'};
+  $('hCountLabel').textContent=labels[m];
+  if(m==='sat'){ $('objSats').setAttribute('visible','true'); $('hCount').textContent=visibleObjs.sat.length; }
+  if(m==='deb'){ $('objDebris').setAttribute('visible','true'); $('hCount').textContent=visibleObjs.deb.length; }
+  if(m==='ast'){ $('objAst').setAttribute('visible','true'); $('hCount').textContent=store.ast.length; }
+  if(m==='wx'){ $('objWeather').setAttribute('visible','true');
+    const n=store.wx?((store.wx.cme?.length||0)+(store.wx.flr?.length||0)+(store.wx.gst?.length||0)):0;
+    $('hCount').textContent=n; }
+}
+
+// ===================== ACTUALIZACIÓN DE POSICIONES EN VIVO =====================
+function recomputeLive(){
+  if(!observer) return;
+  const now=new Date();
+  if(store.sat.length){ visibleObjs.sat=computeVisible(store.sat, now); renderPoints('objSats', visibleObjs.sat, 'sat'); }
+  if(store.deb.length){ visibleObjs.deb=computeVisible(store.deb, now); renderPoints('objDebris', visibleObjs.deb, 'deb'); }
+  if(mode==='sat') $('hCount').textContent=visibleObjs.sat.length;
+  if(mode==='deb') $('hCount').textContent=visibleObjs.deb.length;
+}
+
+// ===================== RELOJ + BRÚJULA =====================
+function startClock(){
+  setInterval(()=>{ $('clock').textContent=new Date().toLocaleString('es-MX',{dateStyle:'full',timeStyle:'medium'}); },1000);
+  $('clock').textContent=new Date().toLocaleString('es-MX',{dateStyle:'full',timeStyle:'medium'});
+}
+// A-Frame component: alinear el mundo con el Norte real usando brújula
+AFRAME.registerComponent('device-tilt', {
+  init(){ this.root=$('skyRoot'); }
+});
+function onOrient(e){
+  let hd=null;
+  if(e.webkitCompassHeading!=null){ hd=e.webkitCompassHeading; }             // iOS
+  else if(e.absolute && e.alpha!=null){ hd=360-e.alpha; }                     // Android absoluto
+  if(hd!=null){
+    heading=hd; $('compassDeg').textContent=Math.round(hd)+'°';
+    const root=$('skyRoot'); if(root) root.setAttribute('rotation', `0 ${-hd} 0`);
+  }
+}
+
+// ===================== SENSORES (permiso iOS) =====================
+function needsPermission(){
+  return (typeof DeviceOrientationEvent!=='undefined' &&
+          typeof DeviceOrientationEvent.requestPermission==='function');
+}
+function attachOrient(){
+  window.addEventListener('deviceorientationabsolute', onOrient, true);
+  window.addEventListener('deviceorientation', onOrient, true);
+}
+function requestSensors(){
+  if(needsPermission()){
+    DeviceOrientationEvent.requestPermission().then(s=>{
+      if(s==='granted'){ attachOrient(); $('permBtn').style.display='none'; toast('🧭 Brújula activada','ok'); }
+      else toast('Permiso de sensores denegado — usa el dedo para mirar alrededor.','warn');
+    }).catch(()=>toast('No se pudo activar la brújula.','warn'));
+  }else{ attachOrient(); $('permBtn').style.display='none'; }
+}
+
+// ===================== CÁMARA (AR passthrough) =====================
+async function startCamera(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ideal:'environment'} }, audio:false });
+    $('camFeed').srcObject=stream;
+  }catch(e){
+    // Sin cámara: fondo espacial degradado
+    $('camFeed').style.background='radial-gradient(circle at 50% 30%, #14183a, #0a0a1a 70%)';
+    toast('Cámara no disponible — mostrando fondo espacial.','warn');
+  }
+}
+
+// ===================== CARGA PRINCIPAL =====================
+async function loadSatellites(){
+  setLoad('Descargando TLE de satélites (CelesTrak)…', 20);
+  let all=[];
+  for(const g of SAT_GROUPS){
+    try{ all=all.concat(await fetchTLE(g)); }catch(e){ console.warn(e.message); }
+  }
+  store.sat=all;
+  if(!all.length) toast('No se pudieron descargar TLE de satélites.','warn');
+}
+async function loadDebris(){
+  setLoad('Descargando catálogo de basura espacial…', 45);
+  let all=[];
+  for(const g of DEBRIS_GROUPS){
+    try{ const d=await fetchTLE(g); all=all.concat(d.slice(0,350)); }catch(e){ console.warn(e.message); }
+  }
+  store.deb=all;
+}
+async function loadAsteroids(){
+  setLoad('Consultando asteroides cercanos (NASA NeoWs)…', 65);
+  try{
+    store.ast=await fetchAsteroids();
+    renderAsteroids(store.ast);
+  }catch(e){
+    if(e.message==='LIMIT'){ toast('⚠️ Límite de la API NASA (DEMO_KEY) alcanzado. Reintenta más tarde o pon tu propia API key.','warn'); }
+    else{ toast('No se pudieron cargar asteroides: '+e.message,'warn'); }
+    store.ast=[];
+  }
+}
+async function loadWeather(){
+  setLoad('Analizando clima espacial (NASA DONKI)…', 82);
+  try{
+    store.wx=await fetchWeather();
+    renderWeather(store.wx);
+    const n=(store.wx.cme?.length||0)+(store.wx.flr?.length||0)+(store.wx.gst?.length||0);
+    $('hWx').textContent = n>0 ? (n+' eventos (7d)') : 'tranquilo';
+  }catch(e){
+    if(e.message==='LIMIT'){
+      $('hWx').textContent='límite API';
+      toast('⚠️ Límite de la API NASA (DEMO_KEY) alcanzado para clima espacial. Reintenta más tarde o pon tu propia API key.','warn');
+    }else{
+      $('hWx').textContent='sin datos';
+      toast('Clima espacial (DONKI) no disponible ahora: '+e.message,'warn');
+    }
+    store.wx=null;
+  }
+}
+
+async function boot(){
+  startClock();
+  setLoad('Solicitando ubicación GPS…', 8);
+  await getLocation();
+  await startCamera();
+
+  // Sensores de orientación
+  if(needsPermission()) $('permBtn').style.display='block'; else attachOrient();
+
+  // Datos reales (satélites primero para render inmediato)
+  await loadSatellites();
+  setLoad('Propagando órbitas con SGP4…', 35);
+  recomputeLive();
+  setMode('sat');
+  hideLoader();
+
+  // Resto en segundo plano
+  await loadDebris(); recomputeLive();
+  await loadAsteroids();
+  await loadWeather();
+
+  // Actualizar posiciones en vivo cada 5 s
+  if(tickTimer) clearInterval(tickTimer);
+  tickTimer=setInterval(recomputeLive, 5000);
+  toast('✓ Datos reales cargados. Apunta el teléfono al cielo.','ok');
+}
+
+function refreshAll(){
+  showLoader(); setLoad('Actualizando datos…',5);
+  // limpiar cachés de API para forzar refresco
+  Object.keys(localStorage).forEach(k=>{ if(k.startsWith('neo_')||k.startsWith('wx_')) localStorage.removeItem(k); });
+  boot();
+}
+
+function goHome(){
+  try{ window.AppInventor.setWebViewString('back'); }
+  catch(e){ history.back(); }
+}
+
+// Arranque cuando A-Frame esté listo
+window.addEventListener('load', ()=>{
+  const sc=document.querySelector('a-scene');
+  if(sc.hasLoaded) boot(); else sc.addEventListener('loaded', boot);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
