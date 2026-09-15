@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEONOSIS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow-x: hidden;
+    background: #0a0a1a; color: #ffffff;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  /* Estrellas animadas */
+  .stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  .star {
+    position: absolute; background: #ffffff; border-radius: 50%;
+    animation: twinkle 3s infinite ease-in-out;
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.2;} 50%{opacity:1;} }
+
+  .container {
+    position: relative; z-index: 1;
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 0 0 24px 0;
+  }
+
+  /* Header */
+  .header {
+    width: 100%; text-align: center;
+    padding: 36px 20px 16px 20px;
+    background: linear-gradient(180deg, rgba(0,212,255,0.08) 0%, transparent 100%);
+  }
+  .logo-orbital {
+    width: 80px; height: 80px; margin: 0 auto 12px auto;
+    position: relative; display: flex; align-items: center; justify-content: center;
+  }
+  .logo-orbital svg { width: 80px; height: 80px; }
+  .app-title {
+    font-size: 2.4rem; font-weight: 900; letter-spacing: 6px;
+    background: linear-gradient(90deg, #00d4ff, #7b2fff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; text-shadow: none;
+    line-height: 1; margin-bottom: 6px;
+  }
+  .app-subtitle {
+    font-size: 0.75rem; color: rgba(255,255,255,0.6);
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+
+  /* Badge NASA */
+  .nasa-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px; padding: 4px 14px; margin-top: 10px;
+    font-size: 0.65rem; color: #00d4ff; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .pulse-dot {
+    width: 6px; height: 6px; background: #00ff88; border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.8);} }
+
+  /* Grid de módulos */
+  .modules-label {
+    width: 100%; padding: 20px 20px 10px 20px;
+    font-size: 0.65rem; color: rgba(255,255,255,0.4);
+    letter-spacing: 3px; text-transform: uppercase;
+  }
+  .modules-grid {
+    width: 100%; padding: 0 16px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .module-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 18px 14px;
+    display: flex; flex-direction: column; align-items: flex-start;
+    cursor: pointer; transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    position: relative; overflow: hidden;
+  }
+  .module-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: var(--accent); opacity: 0.7;
+  }
+  .module-card:active { transform: scale(0.97); opacity: 0.85; }
+
+  .card-ar    { --accent: linear-gradient(90deg,#00d4ff,#0090ff); }
+  .card-test  { --accent: linear-gradient(90deg,#7b2fff,#ff2fff); }
+  .card-lab   { --accent: linear-gradient(90deg,#7b2fff,#00d4ff); }
+  .card-clima { --accent: linear-gradient(90deg,#ff8c00,#ff2fff); }
+  .card-red   { --accent: linear-gradient(90deg,#00d4ff,#00ff88); }
+
+  .card-icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .card-title {
+    font-size: 0.8rem; font-weight: 700; color: #ffffff;
+    margin-bottom: 4px; letter-spacing: 0.5px;
+  }
+  .card-desc {
+    font-size: 0.65rem; color: rgba(255,255,255,0.45);
+    line-height: 1.4;
+  }
+  .card-arrow {
+    position: absolute; bottom: 14px; right: 14px;
+    color: rgba(255,255,255,0.2); font-size: 0.8rem;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 24px; text-align: center;
+    font-size: 0.6rem; color: rgba(255,255,255,0.2);
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Estrellas -->
+<div class="stars" id="stars"></div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-orbital">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Órbita exterior -->
+        <ellipse cx="40" cy="40" rx="36" ry="14" stroke="#00d4ff" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.6" transform="rotate(-20 40 40)"/>
+        <!-- Órbita interior -->
+        <ellipse cx="40" cy="40" rx="26" ry="10" stroke="#7b2fff" stroke-width="1" stroke-dasharray="3 4" opacity="0.5" transform="rotate(30 40 40)"/>
+        <!-- Planeta central -->
+        <circle cx="40" cy="40" r="12" fill="url(#planetGrad)"/>
+        <!-- Anillo del planeta -->
+        <ellipse cx="40" cy="40" rx="18" ry="5" stroke="#00d4ff" stroke-width="1.5" opacity="0.8" transform="rotate(-10 40 40)"/>
+        <!-- Satélite -->
+        <circle cx="70" cy="30" r="3.5" fill="#00d4ff" opacity="0.9"/>
+        <!-- Asteroide -->
+        <circle cx="12" cy="55" r="2.5" fill="#7b2fff" opacity="0.8"/>
+        <defs>
+          <radialGradient id="planetGrad" cx="40%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#3a5fff"/>
+            <stop offset="100%" stop-color="#0a0a3a"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+    <div class="app-title">GEONOSIS</div>
+    <div class="app-subtitle">Inteligencia Aeroespacial en tu Mano</div>
+    <div class="nasa-badge">
+      <div class="pulse-dot"></div>
+      Datos NASA en Vivo
+    </div>
+  </div>
+
+  <div class="modules-label">MÓDULOS DE MISIÓN</div>
+
+  <!-- Grid de módulos -->
+  <div class="modules-grid">
+
+    <div class="module-card card-ar" onclick="goTo('ar')">
+      <div class="card-icon">🔭</div>
+      <div class="card-title">AR Aeroespacial</div>
+      <div class="card-desc">Ver el espacio en tiempo real</div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="module-card card-test" onclick="goTo('cosmos')">
+      <div class="card-icon">🌌</div>
+      <div class="card-title">NASA Cosmos</div>
+      <div class="card-desc">Trivia y foto del día</div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="module-card card-lab" onclick="goTo('lab')">
+      <div class="card-icon">🧪</div>
+      <div class="card-title">LAB. MATERIALES</div>
+      <div class="card-desc">Materiales &amp; Simulación</div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="module-card card-clima" onclick="goTo('clima')">
+      <div class="card-icon">✈️</div>
+      <div class="card-title">Aeronáutico</div>
+      <div class="card-desc">Clima y tráfico de vuelos</div>
+      <div class="card-arrow">›</div>
+    </div>
+
+    <div class="module-card card-red" onclick="goTo('red')">
+      <div class="card-icon">🌍</div>
+      <div class="card-title">Red Ciudadana</div>
+      <div class="card-desc">Reporta y conecta</div>
+      <div class="card-arrow">›</div>
+    </div>
+
+  </div>
+
+  <div class="footer">GEONOSIS v1.0 &nbsp;·&nbsp; Proyecto Aeroespacial</div>
+</div>
+
+<script>
+  // Generar estrellas
+  (function() {
+    var container = document.getElementById('stars');
+    for (var i = 0; i < 80; i++) {
+      var star = document.createElement('div');
+      star.className = 'star';
+      var size = Math.random() * 2.5 + 0.5;
+      star.style.cssText = [
+        'width:' + size + 'px',
+        'height:' + size + 'px',
+        'top:' + Math.random() * 100 + '%',
+        'left:' + Math.random() * 100 + '%',
+        'animation-delay:' + Math.random() * 3 + 's',
+        'animation-duration:' + (2 + Math.random() * 3) + 's'
+      ].join(';');
+      container.appendChild(star);
+    }
+  })();
+
+  // Navegación hacia App Inventor
+  function goTo(module) {
+    try {
+      window.AppInventor.setWebViewString(module);
+    } catch(e) {
+      // En navegador de prueba — solo aviso
+      console.log('Navegando a: ' + module);
+    }
+  }
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
