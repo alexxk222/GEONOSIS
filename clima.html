@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GEONOSIS · ¿Miedo a volar?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.4.0/dist/aframe-master.min.js"></script>
+<style>
+:root{
+  /* Paleta aeronáutica: cielo, navy de cabina y ámbar de pista */
+  --bg:#06121f; --bg2:#0a1b30; --blue:#3ec6ff; --purple:#ff9e2c;
+  --white:#ffffff; --dim:#9fb3d1; --green:#00ff9c; --yellow:#ffd23f; --red:#ff3b5c;
+  --card:rgba(12,28,52,.72); --border:rgba(62,198,255,.24);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Exo 2',sans-serif;color:var(--white);background:var(--bg);
+  overflow-x:hidden;position:relative;min-height:100vh;
+}
+/* Fondo estelar animado */
+.stars,.stars2{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stars{background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 60% 70%,#7b2fff,transparent),radial-gradient(2px 2px at 80% 20%,#00d4ff,transparent),radial-gradient(1px 1px at 40% 80%,#fff,transparent),radial-gradient(1px 1px at 90% 60%,#fff,transparent);background-size:200px 200px;opacity:.5;animation:drift 90s linear infinite}
+.stars2{background-image:radial-gradient(1px 1px at 10% 50%,#fff,transparent),radial-gradient(1px 1px at 70% 40%,#00d4ff,transparent),radial-gradient(1px 1px at 30% 10%,#fff,transparent);background-size:300px 300px;opacity:.3;animation:drift 140s linear infinite reverse}
+@keyframes drift{from{background-position:0 0}to{background-position:400px 400px}}
+/* Avión decorativo aeronáutico que cruza la pantalla */
+.flyby{position:fixed;top:70px;left:-60px;z-index:1;font-size:26px;pointer-events:none;opacity:.85;filter:drop-shadow(0 0 10px var(--blue));animation:flyby 14s linear infinite}
+.flyby::after{content:'';position:absolute;top:50%;right:100%;width:120px;height:2px;background:linear-gradient(90deg,transparent,rgba(62,198,255,.55));transform:translateY(-50%)}
+@keyframes flyby{0%{transform:translateX(0) translateY(0)}50%{transform:translateX(50vw) translateY(-14px)}100%{transform:translateX(112vw) translateY(0)}}
+.glow{position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none;opacity:.35}
+.g1{width:340px;height:340px;background:var(--purple);top:-120px;left:-100px}
+.g2{width:300px;height:300px;background:var(--blue);bottom:-120px;right:-100px}
+
+.wrap{position:relative;z-index:2;max-width:680px;margin:0 auto;padding:16px 14px 40px}
+
+/* Header */
+.top{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.back{width:42px;height:42px;flex:0 0 42px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--blue);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.2s}
+.back:active{transform:scale(.92);background:rgba(0,212,255,.15)}
+.brand{font-family:'Orbitron';font-weight:900;font-size:13px;letter-spacing:3px;color:var(--dim)}
+.brand b{color:var(--blue)}
+
+.hero{text-align:center;padding:14px 10px 18px}
+.hero .plane{font-size:44px;display:inline-block;animation:float 4s ease-in-out infinite;filter:drop-shadow(0 0 14px var(--blue))}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-10px) rotate(-6deg)}}
+.hero h1{font-family:'Orbitron';font-weight:900;font-size:clamp(22px,6vw,32px);margin:6px 0 4px;background:linear-gradient(90deg,var(--blue),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--dim);font-size:14px;max-width:440px;margin:0 auto;line-height:1.5}
+
+.label{font-family:'Orbitron';font-size:11px;letter-spacing:2px;color:var(--blue);text-transform:uppercase;margin:22px 4px 10px;display:flex;align-items:center;gap:8px}
+.label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+/* Rutas */
+.routes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.route{position:relative;border:1px solid var(--border);border-radius:16px;background:var(--card);backdrop-filter:blur(8px);padding:14px 12px;cursor:pointer;transition:.2s;overflow:hidden}
+.route:active{transform:scale(.97)}
+.route.on{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue),0 8px 30px rgba(0,212,255,.25)}
+.route .rt{display:flex;align-items:center;justify-content:space-between;font-family:'Orbitron';font-weight:700;font-size:15px}
+.route .rt small{color:var(--dim);font-family:'Exo 2';font-weight:600}
+.route .arrow{color:var(--purple);font-size:16px}
+.route .meta{color:var(--dim);font-size:12px;margin-top:6px;display:flex;gap:6px;align-items:center}
+.route .meta b{color:var(--white);font-weight:600}
+
+.cities{color:var(--dim);font-size:11.5px;margin-top:2px}
+
+/* Botón principal */
+.btn{width:100%;border:none;border-radius:14px;padding:15px;font-family:'Orbitron';font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer;transition:.2s;color:#04122a;background:linear-gradient(90deg,var(--blue),var(--purple));box-shadow:0 8px 30px rgba(123,47,255,.35)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;filter:grayscale(.4)}
+.btn.ghost{background:var(--card);color:var(--blue);border:1px solid var(--border);box-shadow:none}
+
+/* Loader */
+.loader{display:none;text-align:center;padding:30px}
+.loader.on{display:block}
+.radar{width:70px;height:70px;margin:0 auto 12px;border-radius:50%;border:2px solid var(--border);position:relative;overflow:hidden}
+.radar::before{content:'';position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0deg,rgba(0,212,255,.5) 60deg,transparent 120deg);animation:spin 1.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader p{color:var(--dim);font-size:13px}
+
+/* Resultado */
+#result{display:none;margin-top:8px}
+#result.on{display:block;animation:fade .5s}
+@keyframes fade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* Semáforo índice */
+.index{border-radius:18px;padding:18px;text-align:center;margin-bottom:14px;border:1px solid var(--border);position:relative;overflow:hidden}
+.index .big{font-family:'Orbitron';font-weight:900;font-size:22px;margin:4px 0}
+.index .sub{font-size:13px;color:var(--dim)}
+.index .dot{width:16px;height:16px;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:middle;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 currentColor}50%{box-shadow:0 0 0 8px transparent}}
+.lvl-verde{background:rgba(0,255,156,.08)}.lvl-verde .big,.lvl-verde .dot{color:var(--green)}
+.lvl-amarillo{background:rgba(255,210,63,.08)}.lvl-amarillo .big,.lvl-amarillo .dot{color:var(--yellow)}
+.lvl-rojo{background:rgba(255,59,92,.08)}.lvl-rojo .big,.lvl-rojo .dot{color:var(--red)}
+
+.leg{display:flex;justify-content:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.leg span{font-size:11px;color:var(--dim);display:flex;align-items:center;gap:5px}
+.leg i{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* Tarjetas de condiciones */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cond{border:1px solid var(--border);border-radius:14px;background:var(--card);padding:12px;position:relative;overflow:hidden}
+.cond .h{display:flex;align-items:center;gap:8px;font-family:'Orbitron';font-size:12px;font-weight:700;margin-bottom:6px}
+.cond .h .ic{font-size:17px}
+.cond .v{font-size:18px;font-weight:700;line-height:1.15}
+.cond .v small{font-size:12px;color:var(--dim);font-weight:400}
+.cond .d{font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.4}
+.cond .tag{position:absolute;top:10px;right:10px;font-size:9px;font-family:'Orbitron';padding:2px 7px;border-radius:20px;letter-spacing:.5px}
+.tag.ok{background:rgba(0,255,156,.14);color:var(--green)}
+.tag.warn{background:rgba(255,210,63,.14);color:var(--yellow)}
+.tag.bad{background:rgba(255,59,92,.14);color:var(--red)}
+.tag.est{background:rgba(123,47,255,.16);color:#c9a8ff;top:auto;bottom:10px}
+.cond.wide{grid-column:1 / -1}
+
+.pt{font-family:'Orbitron';font-size:10px;color:var(--purple);letter-spacing:1px;margin:16px 4px 8px;display:flex;align-items:center;gap:6px}
+
+/* Tráfico */
+.traffic{border:1px solid var(--border);border-radius:16px;background:var(--card);padding:14px;margin-top:6px}
+.traffic .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.sel{flex:1;min-width:120px;background:var(--bg2);border:1px solid var(--border);color:var(--white);padding:10px;border-radius:10px;font-family:'Exo 2';font-size:13px}
+.trbar{height:12px;border-radius:8px;background:var(--bg2);overflow:hidden;margin:8px 0}
+.trbar i{display:block;height:100%;border-radius:8px;transition:width .6s}
+.trres{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.trlevel{font-family:'Orbitron';font-weight:700;font-size:16px}
+
+/* AR viento */
+.arwind{position:fixed;inset:0;z-index:50;display:none;background:#000}
+.arwind.on{display:block}
+.ar-hud{position:fixed;z-index:60;left:0;right:0;bottom:0;padding:16px;background:linear-gradient(0deg,rgba(4,8,22,.92),transparent);pointer-events:none}
+.ar-hud .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;max-width:420px;margin:0 auto;pointer-events:auto;backdrop-filter:blur(8px)}
+.ar-hud .compass{display:flex;align-items:center;gap:14px}
+.ar-hud .rose{width:60px;height:60px;flex:0 0 60px;border:2px solid var(--border);border-radius:50%;position:relative}
+.ar-hud .needle{position:absolute;left:50%;top:50%;width:3px;height:26px;background:linear-gradient(var(--blue),var(--purple));transform-origin:bottom center;border-radius:2px;transform:translate(-50%,-100%)}
+.ar-hud .rose b{position:absolute;font-size:9px;color:var(--dim);left:50%;top:3px;transform:translateX(-50%)}
+.ar-hud h3{font-family:'Orbitron';font-size:14px;color:var(--blue)}
+.ar-hud p{font-size:12px;color:var(--dim);margin-top:2px}
+.ar-close{position:fixed;top:14px;right:14px;z-index:61;width:44px;height:44px;border-radius:12px;background:rgba(10,10,26,.7);border:1px solid var(--border);color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;pointer-events:auto;cursor:pointer}
+.ar-msg{position:fixed;top:14px;left:14px;z-index:61;background:rgba(10,10,26,.7);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--dim);max-width:60%}
+
+.err{display:none;border:1px solid var(--red);background:rgba(255,59,92,.08);border-radius:14px;padding:14px;color:#ffb3c0;font-size:13px;text-align:center;margin-top:10px}
+.err.on{display:block}
+.foot{text-align:center;color:var(--dim);font-size:10.5px;margin-top:22px;line-height:1.6}
+.foot b{color:var(--blue)}
+.spin-ic{display:inline-block;animation:spin 2s linear infinite}
+</style>
+</head>
+<body>
+<div class="stars"></div><div class="stars2"></div>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="flyby">✈️</div>
+
+<div class="wrap">
+  <div class="top">
+    <div class="back" onclick="goBack()">‹</div>
+    <div class="brand">GEO<b>NOSIS</b> · SKYCHECK</div>
+  </div>
+
+  <div class="hero">
+    <div class="plane">🛫</div>
+    <h1>¿Tienes miedo a volar?</h1>
+    <p>Consulta las condiciones meteorológicas reales de tu vuelo antes de despegar. Información de pilotos, explicada para todos.</p>
+  </div>
+
+  <div class="label">✈️ Elige tu vuelo</div>
+  <div class="routes" id="routes"></div>
+
+  <div style="margin-top:16px"></div>
+  <button class="btn" id="goBtn" onclick="consultar()" disabled>🔍 Consultar condiciones</button>
+
+  <div class="loader" id="loader">
+    <div class="radar"></div>
+    <p>Escaneando la atmósfera de tu ruta…</p>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div id="result">
+    <!-- Índice -->
+    <div class="label">📋 Diagnóstico del vuelo</div>
+    <div class="index" id="index"></div>
+    <div class="leg">
+      <span><i style="background:var(--green)"></i>Verde · Favorable</span>
+      <span><i style="background:var(--yellow)"></i>Amarillo · Precaución</span>
+      <span><i style="background:var(--red)"></i>Rojo · Alerta</span>
+    </div>
+
+    <div class="pt">◆ CONDICIONES METEOROLÓGICAS</div>
+    <div class="grid" id="conds"></div>
+
+    <!-- Tráfico -->
+    <div class="label">🗼 Tráfico aéreo por aeropuerto</div>
+    <div class="traffic">
+      <div class="row">
+        <select class="sel" id="apSel"></select>
+        <input class="sel" type="date" id="apDate" style="flex:0 0 140px">
+        <input class="sel" type="time" id="apTime" style="flex:0 0 110px">
+      </div>
+      <div class="trres"><span style="color:var(--dim);font-size:12px">Intensidad estimada</span><span class="trlevel" id="trLevel">—</span></div>
+      <div class="trbar"><i id="trBar" style="width:0"></i></div>
+      <div style="font-size:11.5px;color:var(--dim)" id="trDesc"></div>
+      <div style="font-size:9px;color:var(--purple);font-family:'Orbitron';margin-top:6px">◆ ESTIMADO POR HORARIO Y FECHA OPERATIVA</div>
+    </div>
+
+    <!-- Viento AR -->
+    <div class="label">🌬️ Viento en tu ubicación</div>
+    <button class="btn ghost" onclick="openWind()">🌬️ Ver viento en Realidad Aumentada</button>
+    <p style="font-size:11.5px;color:var(--dim);text-align:center;margin-top:8px">Detecta la dirección del aire donde estás y la simula en el cielo con partículas.</p>
+  </div>
+
+  <div class="foot">
+    Datos meteorológicos en vivo: <b>Open-Meteo</b> · Modelo aeronáutico GEONOSIS<br>
+    Las condiciones marcadas <b>(estimado)</b> son cálculos del sistema, no reportes oficiales METAR/SIGMET.<br>
+    Herramienta educativa — no sustituye el briefing oficial de vuelo.
+  </div>
+</div>
+
+<!-- ===== AR VIENTO ===== -->
+<div class="arwind" id="arwind"></div>
+<div class="ar-close" id="arClose" style="display:none" onclick="closeWind()">✕</div>
+<div class="ar-msg" id="arMsg" style="display:none"></div>
+<div class="ar-hud" id="arHud" style="display:none">
+  <div class="card">
+    <div class="compass">
+      <div class="rose"><b>N</b><div class="needle" id="needle"></div></div>
+      <div>
+        <h3 id="windTitle">Viento local</h3>
+        <p id="windInfo">Detectando…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= NAVEGACIÓN APP INVENTOR ================= */
+function goBack(){
+  try{ if(window.AppInventor && window.AppInventor.setWebViewString){ window.AppInventor.setWebViewString('back'); return; } }catch(e){}
+  history.length>1?history.back():(location.href='home.html');
+}
+
+/* ================= DATOS DE RUTAS Y AEROPUERTOS ================= */
+const AP = {
+  QRO:{name:'Querétaro',icao:'MMQT',lat:20.6173,lon:-100.1857,base:0.25},
+  MTY:{name:'Monterrey',icao:'MMMY',lat:25.7785,lon:-100.1069,base:0.55},
+  IAH:{name:'Houston',icao:'KIAH',lat:29.9844,lon:-95.3414,base:1.0},
+  MEX:{name:'Ciudad de México',icao:'MMMX',lat:19.4363,lon:-99.0721,base:1.0},
+  CUN:{name:'Cancún',icao:'MMUN',lat:21.0365,lon:-86.8771,base:0.7},
+  GDL:{name:'Guadalajara',icao:'MMGL',lat:20.5218,lon:-103.3111,base:0.6},
+};
+const ROUTES = [
+  {o:'QRO',d:'MTY',time:'1h 16min',km:574},
+  {o:'QRO',d:'IAH',time:'1h 59min',km:1149},
+  {o:'MEX',d:'CUN',time:'2h 08min',km:1284},
+  {o:'MEX',d:'GDL',time:'1h 08min',km:459},
+];
+let selRoute = null;
+
+/* Render selector de rutas */
+const routesEl = document.getElementById('routes');
+ROUTES.forEach((r,i)=>{
+  const el=document.createElement('div');
+  el.className='route';
+  el.innerHTML=`<div class="rt">${r.o} <span class="arrow">→</span> ${r.d}</div>
+    <div class="cities">${AP[r.o].name} → ${AP[r.d].name}</div>
+    <div class="meta">🕒 <b>${r.time}</b> · 📏 <b>${r.km} km</b></div>`;
+  el.onclick=()=>{selRoute=i;document.querySelectorAll('.route').forEach(x=>x.classList.remove('on'));el.classList.add('on');document.getElementById('goBtn').disabled=false;};
+  routesEl.appendChild(el);
+});
+
+/* Poblar selector de aeropuertos (los de las rutas) */
+const apSel=document.getElementById('apSel');
+['QRO','MTY','IAH','MEX','CUN','GDL'].forEach(k=>{
+  const o=document.createElement('option');o.value=k;o.textContent=`${AP[k].name} (${AP[k].icao})`;apSel.appendChild(o);
+});
+
+/* ================= UTILIDADES METEOROLÓGICAS ================= */
+const DIRS=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+function compass(deg){return DIRS[Math.round(deg/22.5)%16];}
+function fetchMeteo(lat,lon){
+  const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+    `&current=temperature_2m,relative_humidity_2m,precipitation,rain,showers,snowfall,weather_code,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,surface_pressure,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility`+
+    `&hourly=wind_speed_250hPa,wind_speed_500hPa,wind_direction_250hPa,temperature_500hPa,temperature_700hPa,relative_humidity_500hPa,relative_humidity_700hPa`+
+    `&forecast_days=1&timezone=auto`;
+  return fetch(u).then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+}
+
+/* Analiza los datos de un punto -> objeto de condiciones con nivel (0 ok,1 warn,2 bad) */
+function analyze(d){
+  const c=d.current, h=d.hourly, now=new Date().getHours();
+  const idx=Math.min(now, h.time.length-1);
+  const w250=h.wind_speed_250hPa[idx], w500=h.wind_speed_500hPa[idx];
+  const t500=h.temperature_500hPa[idx], t700=h.temperature_700hPa[idx];
+  const rh500=h.relative_humidity_500hPa[idx], rh700=h.relative_humidity_700hPa[idx];
+  const R={};
+
+  // --- Lluvia y tormentas ---
+  const wc=c.weather_code, pr=c.precipitation||0;
+  let stormTxt,stormDesc,stormLvl;
+  if([95,96,99].includes(wc)){
+    if([96,99].includes(wc)){stormTxt='Tormenta con granizo';stormLvl=2;stormDesc='Actividad eléctrica y posible granizo. Situación severa para el vuelo.';}
+    else{stormTxt='Tormenta eléctrica';stormLvl=2;stormDesc='Descargas eléctricas activas. Las aeronaves evitan estas células.';}
+  }else if(pr>=7.6||[65,82].includes(wc)){stormTxt='Lluvia severa';stormLvl=2;stormDesc='Precipitación intensa que reduce visibilidad y frenado.';}
+  else if(pr>0.2||[51,53,55,61,63,80,81].includes(wc)){stormTxt='Lluvia ligera';stormLvl=1;stormDesc='Precipitación presente, generalmente manejable.';}
+  else{stormTxt='Cielo tranquilo';stormLvl=0;stormDesc='Sin precipitación ni tormentas. Condición ideal.';}
+  R.storm={ic:stormLvl==0?'🌤️':stormLvl==1?'🌧️':'⛈️',title:'Lluvia / Tormentas',val:stormTxt,desc:stormDesc,lvl:stormLvl};
+
+  // --- Viento ---
+  const ws=c.wind_speed_10m, wg=c.wind_gusts_10m, wd=c.wind_direction_10m;
+  let wLvl = ws>=45||wg>=60?2 : ws>=28||wg>=40?1 : 0;
+  R.wind={ic:'🧭',title:'Viento',val:`${Math.round(ws)} <small>km/h</small>`,
+    desc:`Dirección ${compass(wd)} (${Math.round(wd)}°) · ráfagas ${Math.round(wg)} km/h. ${wLvl==0?'Viento suave, sin problema.':wLvl==1?'Viento moderado, posibles crosswinds en pista.':'Viento fuerte, complica despegue/aterrizaje.'}`,
+    lvl:wLvl, dir:wd, spd:ws};
+
+  // --- Turbulencia (estimado) ---
+  const shear=Math.abs(w250-w500), jet=w250;
+  let tbLvl = (jet>=120||shear>=45)?2 : (jet>=75||shear>=25)?1 : 0;
+  let tbTxt = tbLvl==2?'Probable / moderada-fuerte':tbLvl==1?'Posible / ligera':'Poco probable';
+  R.turb={ic:'🌀',title:'Turbulencia',val:tbTxt,est:true,
+    desc:`${tbLvl>0?'Podría encontrarse en niveles altos (crucero ~9-11 km).':'Aire estable en ruta.'} Viento en altura ${Math.round(jet)} km/h, cizalladura ${Math.round(shear)} km/h.`,
+    lvl:tbLvl};
+
+  // --- Nubes ---
+  const cl=c.cloud_cover_low,cm=c.cloud_cover_mid,ch=c.cloud_cover_high,ct=c.cloud_cover;
+  let cType,cAlt,cLvl;
+  if(cl>=50){cType='Nubes bajas (estratos/cúmulos)';cAlt='base ~0.5-2 km';cLvl=stormLvl>=2?2:1;}
+  else if(cm>=50){cType='Nubes medias (altocúmulos)';cAlt='~2-6 km';cLvl=1;}
+  else if(ch>=50){cType='Nubes altas (cirros)';cAlt='~6-12 km';cLvl=0;}
+  else{cType='Cielo despejado';cAlt='sin capas densas';cLvl=0;}
+  const danger = (cl>=70 && stormLvl>=1);
+  R.cloud={ic:'☁️',title:'Nubes',val:cType,
+    desc:`${cAlt} · cobertura total ${ct}%. ${danger?'⚠️ Nubosidad densa + precipitación: capa peligrosa.':'Extensión segura para la operación.'}`,
+    lvl:danger?2:cLvl};
+
+  // --- Hielo en vuelo (estimado) ---
+  let iceLvl=0,iceTxt='Sin riesgo';
+  const icing=(lev,t,rh)=>t<=0&&t>=-20&&rh>=70;
+  if(icing(500,t500,rh500)||icing(700,t700,rh700)){iceLvl=(rh500>=85||rh700>=85)?2:1;iceTxt=iceLvl==2?'Riesgo alto':'Riesgo moderado';}
+  R.ice={ic:'❄️',title:'Hielo en vuelo',val:iceTxt,est:true,
+    desc:`Temp. en altura ${Math.round(t700)}°C / ${Math.round(t500)}°C con humedad ${Math.round(Math.max(rh500,rh700))}%. ${iceLvl>0?'Condiciones de engelamiento posibles al cruzar nubes frías.':'Fuera del rango típico de engelamiento.'}`,
+    lvl:iceLvl};
+
+  // --- Visibilidad ---
+  const vis=(c.visibility||0)/1000;
+  let vLvl = vis<1.6?2 : vis<5?1 : 0;
+  let cause = [4,5,6,7].includes(wc)?' (polvo/humo en el aire)':[45,48].includes(wc)?' (niebla)':'';
+  R.vis={ic:'👁️',title:'Visibilidad',val:`${vis.toFixed(1)} <small>km</small>`,
+    desc:`${vLvl==0?'Visibilidad excelente':vLvl==1?'Visibilidad reducida':'Visibilidad muy baja'}${cause}. ${vLvl>0?'Puede exigir aproximación por instrumentos.':'Operación visual sin restricción.'}`,
+    lvl:vLvl};
+
+  // --- Temperatura ---
+  const tp=c.temperature_2m;
+  let tLvl = tp>=38||tp<=-5?2 : tp>=32||tp<=2?1 : 0;
+  R.temp={ic:'🌡️',title:'Temperatura',val:`${Math.round(tp)} <small>°C</small>`,
+    desc:`${tp>=32?'Calor: reduce la densidad del aire, el motor y las alas rinden menos y se necesita más pista.':tp<=2?'Frío: riesgo de hielo en superficies; requiere deshielo.':'Temperatura óptima para el rendimiento del avión.'}`,
+    lvl:tLvl};
+
+  // --- Presión atmosférica ---
+  const pmsl=c.pressure_msl, psfc=c.surface_pressure;
+  let pLvl = pmsl<1000||pmsl>1030?1:0;
+  R.pres={ic:'📊',title:'Presión',val:`${Math.round(pmsl)} <small>hPa</small>`,
+    desc:`Nivel del mar ${Math.round(pmsl)} hPa · superficie ${Math.round(psfc)} hPa. ${pmsl<1000?'Baja presión: el altímetro debe recalibrarse o marcará de más.':pmsl>1030?'Alta presión: ajustar altímetro para lecturas correctas.':'Presión estándar, altímetros y sistemas sin ajustes especiales.'}`,
+    lvl:pLvl};
+
+  return R;
+}
+
+/* Combina origen y destino: toma el peor nivel por condición */
+function worst(a,b){
+  const out={};
+  for(const k in a){
+    out[k] = a[k].lvl>=b[k].lvl ? {...a[k]} : {...b[k]};
+    out[k]._where = a[k].lvl>b[k].lvl?'origen':a[k].lvl<b[k].lvl?'destino':'ruta';
+  }
+  return out;
+}
+
+/* ================= CONSULTA PRINCIPAL ================= */
+async function consultar(){
+  if(selRoute===null)return;
+  const r=ROUTES[selRoute];
+  document.getElementById('result').classList.remove('on');
+  document.getElementById('err').classList.remove('on');
+  document.getElementById('loader').classList.add('on');
+  document.getElementById('goBtn').disabled=true;
+  try{
+    const [dO,dD]=await Promise.all([fetchMeteo(AP[r.o].lat,AP[r.o].lon),fetchMeteo(AP[r.d].lat,AP[r.d].lon)]);
+    const cond=worst(analyze(dO),analyze(dD));
+    render(r,cond);
+    document.getElementById('loader').classList.remove('on');
+    document.getElementById('result').classList.add('on');
+    document.getElementById('result').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    document.getElementById('loader').classList.remove('on');
+    const err=document.getElementById('err');
+    err.innerHTML='⚠️ No se pudo obtener el clima en vivo.<br><small>Revisa la conexión del dispositivo e inténtalo de nuevo.</small><br><br><button class="btn ghost" onclick="consultar()" style="max-width:200px">Reintentar</button>';
+    err.classList.add('on');
+  }
+  document.getElementById('goBtn').disabled=false;
+}
+
+function render(r,cond){
+  // Índice global
+  const lvls=Object.values(cond).map(c=>c.lvl);
+  const bad=lvls.filter(l=>l==2).length, warn=lvls.filter(l=>l==1).length;
+  let cls,txt,sub;
+  if(bad>=2){cls='rojo';txt='🔴 ALERTA · RIESGO ELEVADO';sub='Riesgo elevado y posible cancelación del vuelo. Varias condiciones críticas en la ruta.';}
+  else if(bad==1){cls='rojo';txt='🔴 ALERTA';sub='Una condición crítica detectada. Requiere evaluación del piloto.';}
+  else if(warn>=2){cls='amarillo';txt='🟡 PRECAUCIÓN';sub='Condiciones a vigilar durante el vuelo, sin riesgo mayor.';}
+  else if(warn==1){cls='amarillo';txt='🟡 PRECAUCIÓN';sub='Una condición merece atención. Vuelo generalmente seguro.';}
+  else{cls='verde';txt='🟢 FAVORABLE';sub='Condiciones óptimas. Buen día para volar. ✨';}
+  const idx=document.getElementById('index');
+  idx.className='index lvl-'+cls;
+  idx.innerHTML=`<div style="font-family:'Orbitron';font-size:12px;color:var(--dim);letter-spacing:2px">${r.o} → ${r.d} · ${AP[r.o].name.split(' ')[0]} a ${AP[r.d].name.split(' ')[0]}</div>
+    <div class="big"><span class="dot"></span>${txt}</div>
+    <div class="sub">${sub}</div>
+    <div style="margin-top:10px;font-size:12px;color:var(--dim)">🕒 Tiempo de vuelo estimado: <b style="color:var(--white)">${r.time}</b> · 📏 ${r.km} km</div>`;
+
+  // Condiciones
+  const order=['storm','wind','turb','cloud','ice','vis','temp','pres'];
+  const tagCls=l=>l==0?'ok':l==1?'warn':'bad';
+  const tagTxt=l=>l==0?'OK':l==1?'PRECAUCIÓN':'ALERTA';
+  const cont=document.getElementById('conds');cont.innerHTML='';
+  order.forEach(k=>{
+    const c=cond[k];const wide=(k=='turb'||k=='cloud')?'wide':'';
+    const el=document.createElement('div');el.className='cond '+wide;
+    el.innerHTML=`<div class="tag ${tagCls(c.lvl)}">${tagTxt(c.lvl)}</div>
+      <div class="h"><span class="ic">${c.ic}</span>${c.title}${c.est?' <span style="font-size:9px;color:#c9a8ff;font-weight:400">(estimado)</span>':''}</div>
+      <div class="v">${c.val}</div>
+      <div class="d">${c.desc}</div>`;
+    cont.appendChild(el);
+  });
+
+  // Tráfico: preseleccionar origen y fecha/hora actuales
+  document.getElementById('apSel').value=r.o;
+  const now=new Date();
+  document.getElementById('apDate').value=now.toISOString().slice(0,10);
+  document.getElementById('apTime').value=now.toTimeString().slice(0,5);
+  updateTraffic();
+}
+
+/* ================= TRÁFICO AÉREO (ESTIMADO POR HORARIO+FECHA) ================= */
+// Curva típica de tráfico por hora (0-23), 0..1
+const HOURCURVE=[.08,.05,.04,.05,.12,.35,.65,.9,1,.85,.7,.72,.78,.7,.68,.75,.85,.95,1,.92,.7,.5,.3,.15];
+function updateTraffic(){
+  const k=document.getElementById('apSel').value;
+  const dateV=document.getElementById('apDate').value;
+  const timeV=document.getElementById('apTime').value;
+  if(!k||!timeV){return;}
+  const hour=parseInt(timeV.split(':')[0]);
+  const base=AP[k].base;
+  const dt=dateV?new Date(dateV+'T00:00'):new Date();
+  const dow=dt.getDay(); // 0 dom .. 6 sab
+  const dayFactor=(dow===0||dow===6)?0.85:(dow===5)?1.08:1.0; // finde algo menos, viernes pico
+  let score=base*HOURCURVE[hour]*dayFactor;
+  score=Math.max(0,Math.min(1,score));
+  let lvl,col,desc;
+  if(score<0.28){lvl='BAJO';col='var(--green)';desc='Pocos movimientos previstos. Operación ágil, poca espera.';}
+  else if(score<0.6){lvl='MEDIO';col='var(--yellow)';desc='Actividad moderada. Posibles esperas breves en rodaje.';}
+  else{lvl='ALTO';col='var(--red)';desc='Alta congestión estimada. Posibles demoras y colas de despegue.';}
+  const days=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  document.getElementById('trLevel').textContent=lvl;
+  document.getElementById('trLevel').style.color=col;
+  document.getElementById('trBar').style.width=Math.round(score*100)+'%';
+  document.getElementById('trBar').style.background=col;
+  document.getElementById('trDesc').innerHTML=`${AP[k].name} · ${days[dow]} a las ${timeV} h. ${desc}`;
+}
+['apSel','apDate','apTime'].forEach(id=>document.getElementById(id).addEventListener('change',updateTraffic));
+
+/* ================= AR VIENTO ================= */
+let arActive=false, windDeg=0, windSpd=0, sceneEl=null, mediaStream=null;
+async function openWind(){
+  document.getElementById('arwind').classList.add('on');
+  document.getElementById('arClose').style.display='flex';
+  document.getElementById('arHud').style.display='block';
+  document.getElementById('arMsg').style.display='block';
+  document.getElementById('arMsg').textContent='📍 Detectando tu ubicación y el viento…';
+  arActive=true;
+  // 1) Ubicación del usuario -> viento real
+  let lat=20.6173,lon=-100.1857; // fallback QRO
+  try{
+    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:6000,maximumAge:60000}));
+    lat=pos.coords.latitude;lon=pos.coords.longitude;
+  }catch(e){document.getElementById('arMsg').textContent='📍 Sin GPS, usando zona de referencia (Querétaro).';}
+  try{
+    const d=await fetchMeteo(lat,lon);
+    windDeg=d.current.wind_direction_10m; windSpd=d.current.wind_speed_10m;
+    document.getElementById('windTitle').textContent=`Viento del ${compass(windDeg)}`;
+    document.getElementById('windInfo').innerHTML=`Sopla hacia el <b style="color:#fff">${compass((windDeg+180)%360)}</b> · ${Math.round(windSpd)} km/h`;
+    document.getElementById('needle').style.transform=`translate(-50%,-100%) rotate(${windDeg}deg)`;
+    document.getElementById('arMsg').textContent='🌬️ Partículas fluyendo con el viento real';
+  }catch(e){document.getElementById('arMsg').textContent='⚠️ No se pudo leer el viento; mostrando simulación base.';windSpd=12;}
+  buildWindScene();
+}
+
+function buildWindScene(){
+  const dirRad=(windDeg+180)*Math.PI/180; // hacia donde sopla
+  const speed=Math.max(4,Math.min(18,windSpd/6)); // velocidad visual
+  // vector de movimiento (X este, Z sur->norte: -Z norte)
+  const vx=Math.sin(dirRad), vz=-Math.cos(dirRad);
+  let particles='';
+  const N=120;
+  const span=16;      // qué tan cerca aparecen (más chico = más cerca y visibles)
+  const travel=span*2;// distancia que recorre cada partícula
+  for(let i=0;i<N;i++){
+    const sx=(Math.random()*span*2-span), sy=(Math.random()*11-3), sz=(Math.random()*span*2-span);
+    const dur=(9000+Math.random()*5000)/(speed*0.14);
+    const ex=sx+vx*travel, ez=sz+vz*travel;
+    const size=0.13+Math.random()*0.17;   // esferas más grandes
+    const col=Math.random()>0.5?'#00d4ff':'#7b2fff';
+    particles+=`<a-entity geometry="primitive:sphere;radius:${size.toFixed(2)}" material="color:${col};emissive:${col};emissiveIntensity:1;opacity:0.9;shader:flat;transparent:true"
+      position="${sx.toFixed(1)} ${sy.toFixed(1)} ${sz.toFixed(1)}"
+      animation="property:position;to:${ex.toFixed(1)} ${sy.toFixed(1)} ${ez.toFixed(1)};dur:${Math.round(dur)};loop:true;easing:linear"
+      animation__f="property:material.opacity;from:0;to:0.9;dur:${Math.round(dur*0.25)};loop:true;dir:alternate"></a-entity>`;
+  }
+  // Flechas guía en la dirección del viento
+  let arrows='';
+  for(let i=0;i<3;i++){
+    const d=(i-1)*3;
+    arrows+=`<a-entity position="${(vx*-6+d*vz).toFixed(1)} 1.5 ${(vz*-6-d*vx).toFixed(1)}" rotation="0 ${(-(windDeg+180)).toFixed(0)} 0">
+      <a-cone color="#00d4ff" radius-bottom="0.25" radius-top="0" height="0.9" material="emissive:#00d4ff;emissiveIntensity:0.6;shader:flat" rotation="-90 0 0"></a-cone>
+    </a-entity>`;
+  }
+  const scene=`<a-scene embedded vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false" renderer="alpha:true;colorManagement:true" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:51;background:transparent">
+    <a-camera look-controls="magicWindowTrackingEnabled:true;touchEnabled:true" wasd-controls-enabled="false" position="0 1.6 0"></a-camera>
+    <a-entity id="skyWind">${particles}${arrows}</a-entity>
+    <a-light type="ambient" color="#8899ff" intensity="0.9"></a-light>
+  </a-scene>`;
+  const host=document.getElementById('arwind');
+  host.innerHTML=scene;
+  startCamera();
+}
+
+async function startCamera(){
+  try{
+    mediaStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    let v=document.getElementById('camFeed');
+    if(!v){v=document.createElement('video');v.id='camFeed';v.autoplay=true;v.playsInline=true;v.muted=true;
+      v.style.cssText='position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:49';
+      document.getElementById('arwind').appendChild(v);}
+    v.srcObject=mediaStream;
+  }catch(e){ document.getElementById('arwind').style.background='linear-gradient(#0a1030,#1a2050)'; }
+}
+
+function closeWind(){
+  arActive=false;
+  if(mediaStream){mediaStream.getTracks().forEach(t=>t.stop());mediaStream=null;}
+  document.getElementById('arwind').classList.remove('on');
+  document.getElementById('arwind').innerHTML='';
+  document.getElementById('arClose').style.display='none';
+  document.getElementById('arHud').style.display='none';
+  document.getElementById('arMsg').style.display='none';
+}
+
+/* Fecha por defecto */
+(function initDate(){
+  const now=new Date();
+  document.getElementById('apDate').value=now.toISOString().slice(0,10);
+  document.getElementById('apTime').value=now.toTimeString().slice(0,5);
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"f0f03d0605bf45f1a3b17cf7d5e6861f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
